@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../widgets/gradient_button.dart';
+import '../../services/auth_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -20,6 +21,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardPage(emoji: '🌅', title: 'Stories Worth\nTelling', desc: 'The best trips start with the right people. Let\'s find yours.'),
   ];
 
+  // Mark onboarding as seen and navigate
+  void _finish() async {
+    await AuthService.markOnboardingSeen();
+    if (mounted) context.go('/signup');
+  }
+
+  void _skip() async {
+    await AuthService.markOnboardingSeen();
+    if (mounted) context.go('/signup');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Align(
                 alignment: Alignment.topRight,
                 child: TextButton(
-                  onPressed: () => context.go('/signup'),
+                  onPressed: _skip,
                   child: Text('Skip', style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textMuted)),
                 ),
               ),
@@ -64,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 text: _currentPage == 2 ? 'Get Started' : 'Continue',
                 onPressed: () {
                   if (_currentPage == 2) {
-                    context.go('/signup');
+                    _finish();
                   } else {
                     _controller.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
                   }
@@ -83,7 +95,6 @@ class _OnboardPage extends StatelessWidget {
   final String emoji;
   final String title;
   final String desc;
-
   const _OnboardPage({required this.emoji, required this.title, required this.desc});
 
   @override
@@ -91,46 +102,24 @@ class _OnboardPage extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Illustration container
         Container(
-          width: double.infinity,
-          height: 240,
+          width: double.infinity, height: 240,
           margin: const EdgeInsets.only(bottom: 36),
-          decoration: BoxDecoration(
-            color: ZussGoTheme.bgSecondary,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: ZussGoTheme.borderDefault),
-          ),
-          child: Stack(
-            children: [
-              Positioned(top: -30, right: -30, child: _orb(120, ZussGoTheme.amber, 0.1)),
-              Positioned(bottom: -20, left: -20, child: _orb(100, ZussGoTheme.rose, 0.08)),
-              Center(child: Text(emoji, style: const TextStyle(fontSize: 72))),
-            ],
-          ),
+          decoration: BoxDecoration(color: ZussGoTheme.bgSecondary, borderRadius: BorderRadius.circular(28), border: Border.all(color: ZussGoTheme.borderDefault)),
+          child: Stack(children: [
+            Positioned(top: -30, right: -30, child: _orb(120, ZussGoTheme.amber, 0.1)),
+            Positioned(bottom: -20, left: -20, child: _orb(100, ZussGoTheme.rose, 0.08)),
+            Center(child: Text(emoji, style: const TextStyle(fontSize: 72))),
+          ]),
         ),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: ZussGoTheme.displayLarge.copyWith(fontSize: 28, height: 1.15),
-        ),
+        Text(title, textAlign: TextAlign.center, style: ZussGoTheme.displayLarge.copyWith(fontSize: 28, height: 1.15)),
         const SizedBox(height: 12),
-        Text(
-          desc,
-          textAlign: TextAlign.center,
-          style: ZussGoTheme.bodyLarge.copyWith(fontSize: 15, fontWeight: FontWeight.w300),
-        ),
+        Text(desc, textAlign: TextAlign.center, style: ZussGoTheme.bodyLarge.copyWith(fontSize: 15, fontWeight: FontWeight.w300)),
       ],
     );
   }
 
   static Widget _orb(double size, Color color, double opacity) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0.0)]),
-      ),
-    );
+    return Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0.0)])));
   }
 }

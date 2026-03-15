@@ -4,9 +4,75 @@ import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/destination_card.dart';
 import '../../widgets/traveler_card.dart';
+import '../../services/auth_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _userName = '';
+  String _userInitial = '';
+  List<Map<String, dynamic>> _travelers = [];
+  bool _isLoadingUsers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+    _loadTravelers();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await AuthService.getSavedUser();
+    if (user != null && mounted) {
+      setState(() {
+        _userName = user['fullName'] ?? 'Traveler';
+        _userInitial = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'Z';
+      });
+    }
+  }
+
+  Future<void> _loadTravelers() async {
+    final user = await AuthService.getSavedUser();
+    final userId = user?['userId'];
+
+    if (userId == null) {
+      setState(() => _isLoadingUsers = false);
+      return;
+    }
+
+    final result = await AuthService.getUsers(userId: userId);
+
+    if (mounted) {
+      setState(() {
+        _isLoadingUsers = false;
+        if (result["success"] == true && result["data"] != null) {
+          _travelers = List<Map<String, dynamic>>.from(result["data"]);
+        }
+      });
+    }
+  }
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String get _firstName {
+    final parts = _userName.split(' ');
+    return parts.isNotEmpty ? parts[0] : 'Traveler';
+  }
+
+  Color _travelerColor(int index) {
+    final colors = [ZussGoTheme.rose, ZussGoTheme.sky, ZussGoTheme.sage, ZussGoTheme.lavender, ZussGoTheme.amber];
+    return colors[index % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +85,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  // ── HEADER (dynamic name) ──
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                     child: Row(
@@ -28,8 +94,8 @@ class HomeScreen extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Good evening', style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w300)),
-                            Text('Arjun ✨', style: ZussGoTheme.displayMedium),
+                            Text(_greeting, style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w300)),
+                            Text('$_firstName ✨', style: ZussGoTheme.displayMedium),
                           ],
                         ),
                         GestureDetector(
@@ -41,14 +107,17 @@ class HomeScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(14),
                             ),
                             alignment: Alignment.center,
-                            child: Text('A', style: ZussGoTheme.labelBold.copyWith(fontSize: 16, fontFamily: 'Playfair Display')),
+                            child: Text(
+                              _userInitial,
+                              style: ZussGoTheme.labelBold.copyWith(fontSize: 16, fontFamily: 'Playfair Display'),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Search bar
+                  // ── SEARCH BAR ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: GestureDetector(
@@ -72,7 +141,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
 
-                  // Trending
+                  // ── TRENDING DESTINATIONS (static for now) ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
@@ -103,7 +172,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
 
-                  // Matches
+                  // ── PEOPLE HEADING OUT (DYNAMIC FROM DATABASE) ──
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -111,22 +180,70 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Text('People Heading Out', style: ZussGoTheme.displaySmall),
                         const SizedBox(height: 4),
-                        Text('Matched to your interests & dates', style: ZussGoTheme.bodySmall),
+                        Text('Real travelers on the platform', style: ZussGoTheme.bodySmall),
                       ],
                     ),
                   ),
                   const SizedBox(height: 14),
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: const [
-                        TravelerCard(id: '1', name: 'Priya', age: 24, destination: 'Goa', dates: 'Dec 20-25', travelStyle: 'Explorer', avatar: '🧡', matchPercent: '91%', accentColor: Color(0xFFF43F5E)),
-                        TravelerCard(id: '2', name: 'Rohan', age: 22, destination: 'Manali', dates: 'Jan 5-10', travelStyle: 'Wanderer', avatar: '💜', matchPercent: '85%', accentColor: Color(0xFF38BDF8)),
-                        TravelerCard(id: '3', name: 'Meera', age: 25, destination: 'Goa', dates: 'Dec 22-28', travelStyle: 'Luxe', avatar: '💚', matchPercent: '78%', accentColor: Color(0xFF22C55E)),
-                      ],
+                  // Loading spinner
+                  if (_isLoadingUsers)
+                    Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.amber.withValues(alpha: 0.5)),
+                      ),
                     ),
-                  ),
+
+                  // Empty state
+                  if (!_isLoadingUsers && _travelers.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: ZussGoTheme.bgSecondary,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: ZussGoTheme.borderDefault),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('🌍', style: TextStyle(fontSize: 36)),
+                            const SizedBox(height: 12),
+                            Text('No travelers yet', style: ZussGoTheme.labelBold),
+                            const SizedBox(height: 4),
+                            Text(
+                              'You\'re one of the first! Invite friends to join ZussGo.',
+                              style: ZussGoTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Real traveler cards
+                  if (!_isLoadingUsers && _travelers.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: List.generate(_travelers.length, (index) {
+                          final t = _travelers[index];
+                          return TravelerCard(
+                            id: t['id'] ?? '',
+                            name: t['fullName'] ?? 'Unknown',
+                            age: t['age'] ?? 0,
+                            destination: t['city'] ?? 'Exploring',
+                            dates: 'Open dates',
+                            travelStyle: t['travelStyle'] ?? 'Explorer',
+                            avatar: (t['fullName'] ?? 'U')[0],
+                            matchPercent: '—',
+                            accentColor: _travelerColor(index),
+                          );
+                        }),
+                      ),
+                    ),
                 ],
               ),
             ),
