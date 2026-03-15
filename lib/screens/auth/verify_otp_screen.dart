@@ -8,12 +8,14 @@ import '../../services/auth_service.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String email;
-  final String type; // "signup" or "recovery"
+  final String type;
+  final String? fullName;
 
   const VerifyOtpScreen({
     super.key,
     required this.email,
     required this.type,
+    this.fullName,
   });
 
   @override
@@ -74,6 +76,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       email: widget.email,
       otp: otp,
       type: widget.type,
+      fullName: widget.fullName,
     );
 
     setState(() => _isLoading = false);

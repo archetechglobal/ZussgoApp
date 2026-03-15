@@ -37,6 +37,7 @@ final GoRouter router = GoRouter(
         return VerifyOtpScreen(
           email: extra['email'] ?? '',
           type: extra['type'] ?? 'signup',
+          fullName: extra['fullName'],
         );
       },
     ),

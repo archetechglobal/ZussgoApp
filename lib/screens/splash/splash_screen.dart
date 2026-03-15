@@ -43,30 +43,28 @@ class _SplashScreenState extends State<SplashScreen>
 
   // Decides where to send the user based on their state
   Future<void> _navigate() async {
-    // Check 1: Has the user seen onboarding before?
-    final hasSeenOnboarding = await AuthService.hasSeenOnboarding();
+    try {
+      final hasSeenOnboarding = await AuthService.hasSeenOnboarding();
+      final isLoggedIn = await AuthService.hasSession();
 
-    // Check 2: Is the user logged in (remember me)?
-    final isLoggedIn = await AuthService.hasSession();
-
-    if (!hasSeenOnboarding) {
-      // First time user → show onboarding
-      if (mounted) context.go('/onboarding');
-    } else if (isLoggedIn) {
-      // Returning user with saved session → check profile
-      final user = await AuthService.getSavedUser();
-      final isProfileCompleted = user?['isProfileCompleted'] ?? false;
-
-      if (mounted) {
-        if (isProfileCompleted) {
-          context.go('/home');
-        } else {
-          context.go('/profile-setup');
+      if (!hasSeenOnboarding) {
+        if (mounted) context.go('/onboarding');
+      } else if (isLoggedIn) {
+        final user = await AuthService.getSavedUser();
+        final isProfileCompleted = user?['isProfileCompleted'] ?? false;
+        if (mounted) {
+          if (isProfileCompleted) {
+            context.go('/home');
+          } else {
+            context.go('/profile-setup');
+          }
         }
+      } else {
+        if (mounted) context.go('/login');
       }
-    } else {
-      // Has seen onboarding but not logged in → login page
-      if (mounted) context.go('/login');
+    } catch (e) {
+      // If anything fails, just go to onboarding as safe default
+      if (mounted) context.go('/onboarding');
     }
   }
 

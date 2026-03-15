@@ -22,6 +22,7 @@ class AuthService {
         }),
       );
 
+      print("SIGNUP RESPONSE: ${response.body}");
       return _parseResponse(response);
     } catch (e) {
       return _connectionError();
@@ -53,7 +54,8 @@ class AuthService {
   static Future<Map<String, dynamic>> verifyOtp({
     required String email,
     required String otp,
-    required String type, // "signup" or "recovery"
+    required String type,
+    String? fullName,
   }) async {
     try {
       final response = await http.post(
@@ -63,6 +65,7 @@ class AuthService {
           "email": email,
           "otp": otp,
           "type": type,
+          if (fullName != null) "fullName": fullName,
         }),
       );
 
@@ -220,10 +223,11 @@ class AuthService {
   // Clear session (logout)
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('user_data');
-    await prefs.setBool('is_logged_in', false);
+    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    await prefs.clear();
+    if (hasSeenOnboarding) {
+      await prefs.setBool('has_seen_onboarding', true);
+    }
   }
 
   // Mark that user has seen onboarding

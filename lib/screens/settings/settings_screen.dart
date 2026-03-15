@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
+import '../../services/auth_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String _userName = '';
+  String _userInitial = '';
+  String _userCity = '';
 
   static const _items = [
     {'icon': Icons.person_rounded, 'label': 'Edit Profile', 'sub': 'Photo, bio, vibes'},
@@ -16,12 +26,35 @@ class SettingsScreen extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getSavedUser();
+    if (user != null && mounted) {
+      setState(() {
+        _userName = user['fullName'] ?? 'Traveler';
+        _userInitial = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'Z';
+        _userCity = user['city'] ?? '';
+      });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    await AuthService.clearSession();
+    if (mounted) context.go('/login');
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 90),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,21 +65,21 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Profile header
+                  // Profile header (dynamic)
                   Row(
                     children: [
                       Container(
                         width: 56, height: 56,
                         decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(18)),
                         alignment: Alignment.center,
-                        child: Text('A', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Playfair Display')),
+                        child: Text(_userInitial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Playfair Display')),
                       ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Arjun Sharma', style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
-                          Text('Mumbai · 2 trips', style: ZussGoTheme.bodySmall),
+                          Text(_userName, style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
+                          Text(_userCity.isNotEmpty ? '$_userCity · 0 trips' : '0 trips', style: ZussGoTheme.bodySmall),
                         ],
                       ),
                     ],
@@ -83,11 +116,11 @@ class SettingsScreen extends StatelessWidget {
                   }),
                   const SizedBox(height: 20),
 
-                  // Logout
+                  // Logout — clears session then navigates
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: _handleLogout,
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: ZussGoTheme.rose.withValues(alpha: 0.15)),
                         backgroundColor: ZussGoTheme.rose.withValues(alpha: 0.05),
@@ -100,9 +133,14 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 4)),
-          ],
-        ),
+          ),
+
+          // Fixed bottom nav
+          const Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: ZussGoBottomNav(currentIndex: 4),
+          ),
+        ],
       ),
     );
   }

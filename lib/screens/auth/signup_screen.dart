@@ -52,9 +52,12 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = false);
 
     if (result["success"] == true) {
-      // Navigate to OTP verification screen
       if (mounted) {
-        context.push('/verify-otp', extra: {'email': email, 'type': 'signup'});
+        context.push('/verify-otp', extra: {
+          'email': email,
+          'type': 'signup',
+          'fullName': fullName,
+        });
       }
     } else {
       setState(() => _errorMessage = result["message"]);
