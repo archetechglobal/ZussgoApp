@@ -95,7 +95,6 @@ class AuthService {
   // ─── RESET PASSWORD (verify OTP + new password) ───
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
-    required String otp,
     required String newPassword,
   }) async {
     try {
@@ -104,14 +103,17 @@ class AuthService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "email": email,
-          "otp": otp,
           "newPassword": newPassword,
         }),
       );
 
-      return _parseResponse(response);
+      final data = jsonDecode(response.body);
+      return {
+        "success": data["success"] ?? false,
+        "message": data["message"] ?? "Something went wrong",
+      };
     } catch (e) {
-      return _connectionError();
+      return {"success": false, "message": "Could not connect to server"};
     }
   }
 

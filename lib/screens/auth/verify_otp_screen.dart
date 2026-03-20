@@ -94,11 +94,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
         }
         if (mounted) context.go('/profile-setup');
       } else {
-        // Recovery verified — navigate to reset password screen
+        // Recovery verified — navigate to reset password with email
         if (mounted) {
           context.push('/reset-password', extra: {
             'email': widget.email,
-            'otp': otp,
           });
         }
       }

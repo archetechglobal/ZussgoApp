@@ -36,7 +36,7 @@ final GoRouter router = GoRouter(
       path: '/reset-password',
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>? ?? {};
-        return ResetPasswordScreen(email: extra['email'] ?? '', otp: extra['otp'] ?? '');
+        return ResetPasswordScreen(email: extra['email'] ?? '');
       },
     ),
     GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupScreen()),

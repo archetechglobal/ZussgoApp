@@ -6,12 +6,10 @@ import '../../services/auth_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
-  final String otp;
 
   const ResetPasswordScreen({
     super.key,
     required this.email,
-    required this.otp,
   });
 
   @override
@@ -23,6 +21,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _confirmController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
@@ -54,45 +54,32 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     final result = await AuthService.resetPassword(
       email: widget.email,
-      otp: widget.otp,
       newPassword: password,
     );
 
     setState(() => _isLoading = false);
 
-    if (result["success"] == true) {
-      if (mounted) {
-        // Show success dialog then navigate to login
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => Dialog(
-            backgroundColor: ZussGoTheme.bgSecondary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('✅', style: TextStyle(fontSize: 48)),
-                  const SizedBox(height: 12),
-                  Text('Password Reset!', style: ZussGoTheme.displaySmall),
-                  const SizedBox(height: 8),
-                  Text('Your password has been updated successfully.', style: ZussGoTheme.bodyMedium, textAlign: TextAlign.center),
-                  const SizedBox(height: 24),
-                  GradientButton(
-                    text: 'Sign In',
-                    onPressed: () {
-                      Navigator.pop(context); // close dialog
-                      context.go('/login');
-                    },
-                  ),
-                ],
-              ),
-            ),
+    if (result["success"] == true && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Dialog(
+          backgroundColor: ZussGoTheme.bgSecondary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('✅', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 12),
+              Text('Password Reset!', style: ZussGoTheme.displaySmall),
+              const SizedBox(height: 8),
+              Text('Your password has been updated. You can now sign in with your new password.', style: ZussGoTheme.bodyMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              GradientButton(text: 'Sign In', onPressed: () { Navigator.pop(context); context.go('/login'); }),
+            ]),
           ),
-        );
-      }
+        ),
+      );
     } else {
       setState(() => _errorMessage = result["message"]);
     }
@@ -107,48 +94,83 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Back
               GestureDetector(
                 onTap: () => context.pop(),
                 child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary),
               ),
               const SizedBox(height: 24),
 
-              Text('ALMOST DONE', style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.amber, fontWeight: FontWeight.w600, letterSpacing: 2)),
+              Text('ALMOST THERE', style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.amber, fontWeight: FontWeight.w600, letterSpacing: 2)),
               const SizedBox(height: 8),
-              Text('Set New\nPassword', style: ZussGoTheme.displayLarge.copyWith(fontSize: 28)),
+              Text('Set Your New\nPassword', style: ZussGoTheme.displayLarge.copyWith(fontSize: 28)),
               const SizedBox(height: 8),
-              Text('Choose a strong password you\'ll remember.', style: ZussGoTheme.bodySmall),
-              const SizedBox(height: 32),
+              Text('Choose a strong password you haven\'t used before.', style: ZussGoTheme.bodySmall),
+              const SizedBox(height: 12),
 
-              // New password
+              // Email indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: ZussGoTheme.mint.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: ZussGoTheme.mint.withValues(alpha: 0.1)),
+                ),
+                child: Row(children: [
+                  Icon(Icons.check_circle_rounded, color: ZussGoTheme.mint, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Verified: ', style: TextStyle(fontSize: 12, color: ZussGoTheme.mint, fontWeight: FontWeight.w600)),
+                  Text(widget.email, style: TextStyle(fontSize: 12, color: ZussGoTheme.textSecondary)),
+                ]),
+              ),
+              const SizedBox(height: 28),
+
+              // New Password
               Text('New Password', style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w600, color: ZussGoTheme.textSecondary)),
               const SizedBox(height: 6),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(hintText: '••••••••'),
+                decoration: InputDecoration(
+                  hintText: '••••••••',
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                    child: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: ZussGoTheme.textMuted, size: 20),
+                  ),
+                ),
                 style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
-                obscureText: true,
+                obscureText: _obscurePassword,
               ),
               const SizedBox(height: 16),
 
-              // Confirm password
+              // Confirm Password
               Text('Confirm Password', style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w600, color: ZussGoTheme.textSecondary)),
               const SizedBox(height: 6),
               TextField(
                 controller: _confirmController,
-                decoration: const InputDecoration(hintText: '••••••••'),
+                decoration: InputDecoration(
+                  hintText: '••••••••',
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    child: Icon(_obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: ZussGoTheme.textMuted, size: 20),
+                  ),
+                ),
                 style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
-                obscureText: true,
+                obscureText: _obscureConfirm,
                 onSubmitted: (_) => _handleReset(),
               ),
               const SizedBox(height: 8),
 
               // Error
               if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_errorMessage!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 13)),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(color: ZussGoTheme.rose.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: ZussGoTheme.rose.withValues(alpha: 0.15))),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(Icons.info_outline_rounded, color: ZussGoTheme.rose, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_errorMessage!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 12, fontWeight: FontWeight.w500))),
+                  ]),
                 ),
 
               const SizedBox(height: 24),
