@@ -163,7 +163,14 @@ class AuthService {
     }
   }
 
-  // Update saved session (for when profile gets completed)
+  // ─── SAVE USER (used by Edit Profile screen) ───
+  // Saves updated user data locally to SharedPreferences
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_data', jsonEncode(user));
+  }
+
+  // ─── UPDATE SAVED USER (for when profile gets completed) ───
   static Future<void> updateSavedUser(Map<String, dynamic> updatedUser) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_data', jsonEncode(updatedUser));
