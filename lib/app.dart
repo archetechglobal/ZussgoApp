@@ -10,7 +10,7 @@ class ZussGoApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'ZussGo',
       debugShowCheckedModeBanner: false,
-      theme: ZussGoTheme.darkTheme,
+      theme: ZussGoTheme.themeData,
       routerConfig: router,
     );
   }

@@ -5,49 +5,25 @@ class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
   final bool isLoading;
-  final double? width;
 
-  const GradientButton({
-    super.key,
-    required this.text,
-    required this.onPressed,
-    this.isLoading = false,
-    this.width,
-  });
+  const GradientButton({super.key, required this.text, required this.onPressed, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width ?? double.infinity,
-      height: 56,
-      child: DecoratedBox(
+    return GestureDetector(
+      onTap: isLoading ? null : onPressed,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           gradient: ZussGoTheme.gradientPrimary,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: ZussGoTheme.amber.withValues(alpha: 0.25),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
+        child: Center(
           child: isLoading
-              ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-          )
-              : Text(text, style: ZussGoTheme.buttonText),
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text(text, style: const TextStyle(fontFamily: 'Outfit', color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
         ),
       ),
     );

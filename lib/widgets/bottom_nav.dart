@@ -1,86 +1,55 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 
 class ZussGoBottomNav extends StatelessWidget {
   final int currentIndex;
-
   const ZussGoBottomNav({super.key, required this.currentIndex});
 
   @override
   Widget build(BuildContext context) {
-    final tabs = [
-      _NavItem(icon: Icons.home_rounded, label: 'Home', route: '/home'),
-      _NavItem(icon: Icons.search_rounded, label: 'Explore', route: '/search'),
-      _NavItem(icon: Icons.handshake_rounded, label: 'Matches', route: '/matches'),
-      _NavItem(icon: Icons.flight_takeoff_rounded, label: 'Trips', route: '/trips'),
-      _NavItem(icon: Icons.person_rounded, label: 'You', route: '/settings'),
-    ];
-
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: 80,
-          decoration: BoxDecoration(
-            color: ZussGoTheme.bgPrimary.withValues(alpha: 0.92),
-            border: const Border(
-              top: BorderSide(color: ZussGoTheme.borderDefault),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(tabs.length, (index) {
-              final isActive = index == currentIndex;
-              return GestureDetector(
-                onTap: () => context.go(tabs[index].route),
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  width: 64,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        tabs[index].icon,
-                        size: 24,
-                        color: isActive ? ZussGoTheme.amber : ZussGoTheme.textMuted,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tabs[index].label,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: isActive ? ZussGoTheme.amber : ZussGoTheme.textMuted,
-                        ),
-                      ),
-                      if (isActive) ...[
-                        const SizedBox(height: 4),
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: const BoxDecoration(
-                            color: ZussGoTheme.amber,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _NavIcon(icon: Icons.home_rounded, index: 0, currentIndex: currentIndex, onTap: () => context.go('/home')),
+          _NavIcon(icon: Icons.explore_rounded, index: 1, currentIndex: currentIndex, onTap: () => context.go('/search')),
+          _NavIcon(icon: Icons.people_rounded, index: 2, currentIndex: currentIndex, onTap: () => context.go('/matches')),
+          _NavIcon(icon: Icons.luggage_rounded, index: 3, currentIndex: currentIndex, onTap: () => context.go('/trips')),
+          _NavIcon(icon: Icons.person_rounded, index: 4, currentIndex: currentIndex, onTap: () => context.go('/settings')),
+        ],
       ),
     );
   }
 }
 
-class _NavItem {
+class _NavIcon extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final String route;
-  _NavItem({required this.icon, required this.label, required this.route});
+  final int index;
+  final int currentIndex;
+  final VoidCallback onTap;
+  const _NavIcon({required this.icon, required this.index, required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = index == currentIndex;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 44, height: 44,
+        decoration: isActive
+            ? BoxDecoration(color: ZussGoTheme.green, shape: BoxShape.circle, boxShadow: [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3))])
+            : null,
+        child: Icon(icon, size: 22, color: isActive ? Colors.white : ZussGoTheme.textMuted),
+      ),
+    );
+  }
 }

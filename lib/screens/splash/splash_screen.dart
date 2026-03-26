@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
-import '../../widgets/logo_painter.dart';
 import '../../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -11,61 +10,17 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeIn;
-  late Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-
-    _fadeIn = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.7, curve: Curves.easeOut)),
-    );
-
-    _scale = Tween<double>(begin: 0.85, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.7, curve: Curves.elasticOut)),
-    );
-
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _fadeIn = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
-
-    // Smart navigation after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) _navigate();
-    });
-  }
-
-  // Decides where to send the user based on their state
-  Future<void> _navigate() async {
-    try {
-      final hasSeenOnboarding = await AuthService.hasSeenOnboarding();
-      final isLoggedIn = await AuthService.hasSession();
-
-      if (!hasSeenOnboarding) {
-        if (mounted) context.go('/onboarding');
-      } else if (isLoggedIn) {
-        final user = await AuthService.getSavedUser();
-        final isProfileCompleted = user?['isProfileCompleted'] ?? false;
-        if (mounted) {
-          if (isProfileCompleted) {
-            context.go('/home');
-          } else {
-            context.go('/profile-setup');
-          }
-        }
-      } else {
-        if (mounted) context.go('/login');
-      }
-    } catch (e) {
-      // If anything fails, just go to onboarding as safe default
-      if (mounted) context.go('/onboarding');
-    }
+    _navigate();
   }
 
   @override
@@ -74,88 +29,101 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  Future<void> _navigate() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    try {
+      final hasSeenOnboarding = await AuthService.hasSeenOnboarding();
+      if (!hasSeenOnboarding) { if (mounted) context.go('/onboarding'); return; }
+
+      final hasSession = await AuthService.hasSession();
+      if (hasSession) {
+        final user = await AuthService.getSavedUser();
+        if (user != null && user['isProfileCompleted'] == true) {
+          if (mounted) context.go('/home');
+        } else {
+          if (mounted) context.go('/profile-setup');
+        }
+      } else {
+        if (mounted) context.go('/login');
+      }
+    } catch (e) {
+      if (mounted) context.go('/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned(top: -100, left: -80, child: _glow(280, ZussGoTheme.amber, 0.1)),
-          Positioned(bottom: -80, right: -60, child: _glow(240, ZussGoTheme.rose, 0.08)),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.35, right: -30,
-            child: _glow(160, ZussGoTheme.mint, 0.05),
-          ),
-
-          Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeIn.value,
-                  child: Transform.scale(
-                    scale: _scale.value,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 88, height: 88,
-                          decoration: BoxDecoration(
-                            gradient: ZussGoTheme.gradientPrimary,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(color: ZussGoTheme.amber.withValues(alpha: 0.25), blurRadius: 40, offset: const Offset(0, 10)),
-                              BoxShadow(color: ZussGoTheme.rose.withValues(alpha: 0.15), blurRadius: 60, offset: const Offset(0, 20)),
-                            ],
-                          ),
-                          child: CustomPaint(painter: ZussGoLogoPainter(), size: const Size(88, 88)),
-                        ),
-                        const SizedBox(height: 24),
-                        Text('ZussGo', style: ZussGoTheme.displayLarge.copyWith(fontSize: 34)),
-                        const SizedBox(height: 8),
-                        Text('TOGETHER WE GO', style: ZussGoTheme.tagline),
-                        const SizedBox(height: 32),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: ZussGoTheme.pillBadge,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(width: 6, height: 6, decoration: const BoxDecoration(shape: BoxShape.circle, color: ZussGoTheme.mint)),
-                              const SizedBox(width: 8),
-                              Text('Find your travel companion', style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.textPrimary.withValues(alpha: 0.45))),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          // Background gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft, end: Alignment.bottomRight,
+                colors: [Color(0xFF059669), Color(0xFF34D399), Color(0xFF0891B2)],
+              ),
             ),
           ),
 
-          Positioned(
-            bottom: 60, left: 0, right: 0,
-            child: FadeTransition(
-              opacity: _fadeIn,
-              child: Column(
-                children: [
-                  Center(child: Container(width: 44, height: 3, decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), gradient: ZussGoTheme.gradientPrimary))),
-                  const SizedBox(height: 16),
-                  Text('v0.1', style: ZussGoTheme.bodySmall.copyWith(fontSize: 10, color: ZussGoTheme.textPrimary.withValues(alpha: 0.15))),
-                ],
+          // Large faded emoji
+          Center(
+            child: Opacity(
+              opacity: 0.08,
+              child: Text('🌍', style: TextStyle(fontSize: 200)),
+            ),
+          ),
+
+          // Dark gradient overlay at bottom
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0xCC000000)],
+                stops: [0.3, 1.0],
+              ),
+            ),
+          ),
+
+          // Content
+          FadeTransition(
+            opacity: _fadeIn,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Explore Your\nFavorite Journey',
+                      style: ZussGoTheme.displayLarge.copyWith(color: Colors.white, fontSize: 34),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Together We Go',
+                      style: ZussGoTheme.bodyLarge.copyWith(color: Colors.white.withValues(alpha: 0.5)),
+                    ),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: SizedBox(
+                        width: 24, height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _glow(double size, Color color, double opacity) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0.0)])),
     );
   }
 }
