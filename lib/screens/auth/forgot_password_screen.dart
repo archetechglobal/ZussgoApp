@@ -28,63 +28,70 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GestureDetector(
-          onTap: () => context.pop(),
-          child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                  color: ZussGoTheme.bgMuted,
-                  borderRadius: BorderRadius.circular(12)
-              ),
-              child: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: ZussGoTheme.textSecondary,
-                  size: 18
-              )
-          )
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) context.pop();
+        else context.go('/login');
+      },
+      child: Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        GestureDetector(
+            onTap: () => context.canPop() ? context.pop() : context.go('/login'),
+            child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                    color: ZussGoTheme.mutedBg(context),
+                    borderRadius: BorderRadius.circular(12)
+                ),
+                child: Icon(
+                    Icons.arrow_back_rounded,
+                    color: ZussGoTheme.secondaryText(context),
+                    size: 18
+                )
+            )
+        ),
       const SizedBox(height: 20),
       Text('RESET PASSWORD',
           style: TextStyle(
               fontSize: 11,
-              color: ZussGoTheme.green,
+              color: context.colors.green,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.5)
       ),
       const SizedBox(height: 6),
       Text('Forgot Your\nPassword?',
-          style: ZussGoTheme.displayLarge.copyWith(fontSize: 28)
+          style: context.textTheme.displayLarge!.copyWith(fontSize: 28)
       ),
       const SizedBox(height: 6),
       Text("Enter your email and we'll send a 6-digit code.",
-          style: ZussGoTheme.bodyMedium
+          style: context.textTheme.bodyMedium!
       ),
       const SizedBox(height: 28),
       Text('Email',
-          style: ZussGoTheme.labelBold.copyWith(
-              color: ZussGoTheme.textSecondary,
+          style: context.textTheme.labelLarge!.copyWith(
+              color: ZussGoTheme.secondaryText(context),
               fontSize: 13)
       ),
       const SizedBox(height: 8),
       TextField(
           controller: _emailC,
-          decoration: ZussGoTheme.inputDecoration(
+          decoration: ZussGoTheme.inputDecorationOf(context, 
               hint: 'arjun@email.com',
               prefix: Icon(
                   Icons.mail_outline_rounded,
-                  color: ZussGoTheme.textMuted,
+                  color: ZussGoTheme.mutedText(context),
                   size: 20)
           ),
-          style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+          style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
           keyboardType: TextInputType.emailAddress,
           onSubmitted: (_) => _send()),
       if (_error != null) Padding(
           padding: const EdgeInsets.only(top: 12),
           child: Text(_error!,
               style: TextStyle(
-                  color: ZussGoTheme.rose,
+                  color: context.colors.rose,
                   fontSize: 12)
           )
       ),
@@ -97,11 +104,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       const SizedBox(height: 20),
       Center(
           child: GestureDetector(
-              onTap: () => context.pop(),
+              onTap: () => context.canPop() ? context.pop() : context.go('/login'),
               child: Text('Back to Sign In',
                   style: TextStyle(
                       fontSize: 13,
-                      color: ZussGoTheme.green,
+                      color: context.colors.green,
                       fontWeight: FontWeight.w600)
               )
           )
@@ -110,6 +117,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     )
     )
     )
-    );
+    ));
   }
 }

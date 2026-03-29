@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
-import '../../widgets/gradient_button.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/destination_data.dart';
 import '../../services/weather_service.dart';
+import '../../services/destination_images.dart';
 
 class DestinationDetailScreen extends StatefulWidget {
   final String destinationId;
   const DestinationDetailScreen({super.key, required this.destinationId});
+  
   @override
   State<DestinationDetailScreen> createState() => _DestinationDetailScreenState();
 }
@@ -18,8 +19,9 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   Map<String, dynamic>? _dest;
   List<Map<String, dynamic>> _travelers = [];
   List<Map<String, dynamic>> _events = [];
-  Map<String, dynamic> _weather = {'temp': '--', 'icon': '🌤️', 'condition': 'Loading...'};
-  bool _isLoading = true, _isCreating = false, _tripCreated = false;
+  Map<String, dynamic> _weather = {'temp': '--', 'icon': '☀️', 'condition': 'Loading...'};
+  String _rating = '4.8';
+  bool _isLoading = true, _isCreating = false;
   DateTime? _startDate, _endDate;
 
   @override
@@ -32,11 +34,10 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       _isLoading = false;
       if (r["success"] == true && r["data"] != null) {
         _dest = Map<String, dynamic>.from(r["data"]);
+        if (_dest!["rating"] != null) _rating = _dest!["rating"].toString();
         if (_dest!["travelers"] != null) _travelers = List<Map<String, dynamic>>.from(_dest!["travelers"]);
       }
     });
-
-    // Load weather + events in background
     _loadWeather();
     _loadEvents();
   }
@@ -53,7 +54,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
 
   Future<void> _pickDates() async {
     final range = await showDateRangePicker(context: context, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)),
-        builder: (c, child) => Theme(data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: ZussGoTheme.green)), child: child!));
+        builder: (c, child) => Theme(data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(primary: context.colors.green)), child: child!));
     if (range != null) setState(() { _startDate = range.start; _endDate = range.end; });
   }
 
@@ -65,134 +66,303 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
     final r = await ApiService.createTrip(userId: user!['userId'], destinationId: _dest!['id'], startDate: _startDate!.toUtc().toIso8601String(), endDate: _endDate!.toUtc().toIso8601String());
     setState(() => _isCreating = false);
     if (r["success"] == true && mounted) {
-      setState(() => _tripCreated = true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Trip to ${_dest!['name']} created! 🎉'), backgroundColor: ZussGoTheme.green));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Trip to ${_dest!['name']} created!'), backgroundColor: context.colors.green));
       _load();
     }
   }
 
-  String _fmtDate(DateTime d) { const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return '${m[d.month - 1]} ${d.day}'; }
+  Color _tc(int i) { final cs = [context.colors.rose, context.colors.sky, context.colors.amber, ZussGoTheme.lavender, context.colors.green]; return cs[i % cs.length]; }
 
-  LinearGradient get _heroGradient {
-    const gs = {'goa': LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF22D3EE)]),
-      'manali': LinearGradient(colors: [Color(0xFF059669), Color(0xFF34D399)]),
-      'ladakh': LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-      'rishikesh': LinearGradient(colors: [Color(0xFF047857), Color(0xFF10B981)]),
-      'jaipur': LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFBBF24)]),
-      'kerala': LinearGradient(colors: [Color(0xFF059669), Color(0xFF34D399)]),
-      'varanasi': LinearGradient(colors: [Color(0xFFDB2777), Color(0xFFF472B6)]),
-      'udaipur': LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)])};
-    return gs[widget.destinationId] ?? const LinearGradient(colors: [Color(0xFF2D9F6F), Color(0xFF4AADE8)]);
+  Widget _buildHero() {
+    final imageUrl = DestinationImages.getImageFromData(_dest!);
+    return Container(
+      height: 280,
+      width: double.infinity,
+      decoration: imageUrl != null 
+          ? BoxDecoration(image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover))
+          : const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                stops: const [0.3, 1.0],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 50, left: 16,
+            child: GestureDetector(
+              onTap: () => context.pop(),
+              child: Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 70, left: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_dest!['name'] ?? '', style: const TextStyle(fontFamily: 'Playfair Display', fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                    const SizedBox(width: 4),
+                    Text('${_dest!['name'] ?? ''}, ${_dest!['country'] ?? 'India'}', style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.9), fontFamily: 'Outfit')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Color _tc(int i) { const cs = [ZussGoTheme.rose, ZussGoTheme.sky, ZussGoTheme.amber, ZussGoTheme.lavender, ZussGoTheme.green]; return cs[i % cs.length]; }
+  Widget _buildPills(String temp) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)]),
+              child: Column(
+                children: [
+                  Text('Travelers', style: TextStyle(fontSize: 10, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit', fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 6),
+                  Text('${_dest!['travelerCount'] ?? 0}', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w800, color: context.colors.green)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)]),
+              child: Column(
+                children: [
+                  Text('Weather', style: TextStyle(fontSize: 10, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit', fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 6),
+                  Text('$temp°C', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w800, color: context.colors.amber)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)]),
+              child: Column(
+                children: [
+                  Text('Rating', style: TextStyle(fontSize: 10, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit', fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_rating, style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.w800, color: context.colors.amber)),
+                      const SizedBox(width: 2),
+                      Icon(Icons.star_rounded, color: context.colors.amber, size: 18),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActions(String slug) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () {
+              _pickDates().then((_) { if (_startDate != null) _createTrip(); });
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))]),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isCreating) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) else const Text("I'm Going Here", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Outfit')),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () => context.push('/browse/$slug', extra: {'name': _dest!['name'], 'destinationId': _dest!['id']}),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(20)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_rounded, size: 18, color: context.colors.green),
+                  const SizedBox(width: 8),
+                  Text('Browse Travelers & Groups', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: context.colors.green, fontFamily: 'Outfit')),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMustVisit(List<Map<String, String>> places) {
+    if (places.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+          child: Row(
+            children: [
+              const Text('Must-Visit ', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 24, fontWeight: FontWeight.w700)),
+              Icon(Icons.place_rounded, size: 24, color: context.colors.amber),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            scrollDirection: Axis.horizontal,
+            itemCount: places.length,
+            itemBuilder: (_, i) {
+              final place = places[i];
+              return Container(
+                width: 120,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 110, height: 110,
+                      decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4))]),
+                      clipBehavior: Clip.hardEdge,
+                      child: place.containsKey('image') 
+                         ? Image.network(place['image']!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Center(child: Icon(Icons.place_rounded, size: 34, color: Colors.grey)))
+                         : const Center(child: Icon(Icons.place_rounded, size: 34, color: Colors.grey)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(place['name']!, style: context.textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: ZussGoTheme.primaryText(context)), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEvents() {
+    if (_events.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Row(
+            children: [
+              const Text('Events ', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 24, fontWeight: FontWeight.w700)),
+              Icon(Icons.event_rounded, size: 24, color: context.colors.amber),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: _events.map((e) => Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)]),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.event_available_rounded, size: 20, color: Colors.white),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(e['name'] ?? '', style: context.textTheme.labelLarge!.copyWith(fontSize: 15, color: ZussGoTheme.primaryText(context))),
+                        const SizedBox(height: 4),
+                        Text('${e['dates'] ?? ''} • ${e['tag'] ?? ''}', style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.mutedText(context), fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: Center(child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.green)));
-    if (_dest == null) return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('😕', style: TextStyle(fontSize: 36)), const SizedBox(height: 8), Text('Not found', style: ZussGoTheme.labelBold)])));
+    if (_isLoading) return Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green)));
+    if (_dest == null) return Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.explore_off_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4)), SizedBox(height: 8), Text('Not found', style: context.textTheme.labelLarge!.adaptive(context))])));
 
-    final slug = widget.destinationId;
-    final bestLabel = DestinationData.getBestMonthsLabel(slug);
-    final places = DestinationData.getMustVisit(slug);
-    final temp = _weather['temp'];
-    final wIcon = _weather['icon'];
-
-    return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Hero
-      Container(height: 200, width: double.infinity, decoration: BoxDecoration(gradient: _heroGradient, borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32))),
-        child: Stack(children: [
-          Center(child: Opacity(opacity: 0.1, child: Text(_dest!['emoji'] ?? '🌍', style: const TextStyle(fontSize: 100)))),
-          Positioned(top: 50, left: 16, child: GestureDetector(onTap: () => context.pop(), child: Container(width: 34, height: 34, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18)))),
-          Positioned(top: 50, right: 16, child: Container(width: 34, height: 34, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.favorite_border_rounded, color: Colors.white, size: 18))),
-          Positioned(bottom: 16, left: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${_dest!['emoji'] ?? ''} ${_dest!['name'] ?? ''}', style: ZussGoTheme.displayLarge.copyWith(color: Colors.white, fontSize: 26)),
-            Text('📍 ${_dest!['state'] ?? 'India'}', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7))),
-          ])),
-        ]),
+    return Scaffold(
+      backgroundColor: ZussGoTheme.scaffoldBg(context),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                _buildHero(),
+                Container(
+                  margin: const EdgeInsets.only(top: 250),
+                  decoration: BoxDecoration(
+                    color: ZussGoTheme.scaffoldBg(context),
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildPills(_weather['temp']?.toString() ?? '--'),
+                      _buildActions(widget.destinationId),
+                      _buildMustVisit(DestinationData.getMustVisit(widget.destinationId)),
+                      _buildEvents(),
+                      const SizedBox(height: 60),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-
-      // Info pills (real weather from API)
-      Padding(padding: const EdgeInsets.fromLTRB(18, 14, 18, 0), child: Row(children: [
-        Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)]),
-            child: Column(children: [Text('Travelers', style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted)), Text('${_dest!['travelerCount'] ?? 0}', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 16, fontWeight: FontWeight.w700, color: ZussGoTheme.green))]))),
-        const SizedBox(width: 6),
-        Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)]),
-            child: Column(children: [Text('Weather', style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted)), Text('$temp°C $wIcon', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 14, fontWeight: FontWeight.w700, color: ZussGoTheme.amber))]))),
-        const SizedBox(width: 6),
-        Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)]),
-            child: Column(children: [Text('Best', style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted)), Text(bestLabel, style: TextStyle(fontFamily: 'Playfair Display', fontSize: 12, fontWeight: FontWeight.w700, color: ZussGoTheme.sky))]))),
-      ])),
-
-      // Date picker + actions
-      Padding(padding: const EdgeInsets.fromLTRB(18, 14, 18, 0), child: Column(children: [
-        GestureDetector(onTap: _pickDates, child: Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(14)),
-            child: Row(children: [Icon(Icons.calendar_month_rounded, color: ZussGoTheme.green, size: 18), const SizedBox(width: 10),
-              Expanded(child: Text(_startDate != null ? '${_fmtDate(_startDate!)} — ${_fmtDate(_endDate!)}' : 'Select your travel dates', style: ZussGoTheme.bodyMedium.copyWith(color: _startDate != null ? ZussGoTheme.textPrimary : ZussGoTheme.textMuted))),
-              if (_startDate != null) GestureDetector(onTap: () => setState(() { _startDate = null; _endDate = null; }), child: Icon(Icons.close_rounded, color: ZussGoTheme.textMuted, size: 16)),
-            ]))),
-        const SizedBox(height: 8),
-        _tripCreated
-            ? Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 14), decoration: BoxDecoration(color: ZussGoTheme.greenLight, borderRadius: BorderRadius.circular(14)),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_rounded, color: ZussGoTheme.green, size: 18), const SizedBox(width: 6), Text('Trip Created! ✈️', style: TextStyle(color: ZussGoTheme.green, fontWeight: FontWeight.w700, fontSize: 14))]))
-            : GradientButton(text: "I'm Going Here ✈️", isLoading: _isCreating, onPressed: _createTrip),
-        const SizedBox(height: 8),
-        GestureDetector(onTap: () => context.push('/browse/$slug', extra: {'name': _dest!['name'], 'destinationId': _dest!['id']}), child: Container(padding: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(14)),
-            child: Center(child: Text('🔍 Browse Travelers & Groups', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ZussGoTheme.green))))),
-      ])),
-
-      // Must Visit (static — landmarks don't change)
-      if (places.isNotEmpty) ...[
-        Padding(padding: const EdgeInsets.fromLTRB(18, 16, 18, 6), child: Text('Must-Visit in ${_dest!['name']} 📍', style: ZussGoTheme.displaySmall)),
-        SizedBox(height: 90, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 18),
-            itemCount: places.length, itemBuilder: (_, i) {
-              final p = places[i];
-              return Container(width: 90, margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 5)]),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Container(width: 36, height: 36, decoration: BoxDecoration(gradient: _heroGradient, borderRadius: BorderRadius.circular(10)), alignment: Alignment.center, child: Text(p['emoji']!, style: const TextStyle(fontSize: 16))),
-                    const SizedBox(height: 4), Text(p['name']!, style: ZussGoTheme.labelBold.copyWith(fontSize: 10), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis), Text(p['info']!, style: ZussGoTheme.bodySmall.copyWith(fontSize: 9)),
-                  ]));
-            })),
-      ],
-
-      // Events (from backend API)
-      if (_events.isNotEmpty) ...[
-        Padding(padding: const EdgeInsets.fromLTRB(18, 12, 18, 6), child: Text('Events & Festivals 🎉', style: ZussGoTheme.displaySmall)),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Column(children: _events.map((e) => Container(
-          padding: const EdgeInsets.all(10), margin: const EdgeInsets.only(bottom: 6),
-          decoration: ZussGoTheme.glassCard,
-          child: Row(children: [
-            Container(width: 32, height: 32, decoration: BoxDecoration(color: ZussGoTheme.rose.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)), alignment: Alignment.center, child: Text(e['emoji'] ?? '🎉', style: const TextStyle(fontSize: 14))),
-            const SizedBox(width: 8), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(e['name'] ?? '', style: ZussGoTheme.labelBold.copyWith(fontSize: 12)), Text('${e['dates'] ?? ''} • ${e['tag'] ?? ''}', style: ZussGoTheme.bodySmall)])),
-          ]),
-        )).toList())),
-      ],
-
-      // Travelers
-      Padding(padding: const EdgeInsets.fromLTRB(18, 12, 18, 6), child: Text('Travelers Heading Here', style: ZussGoTheme.displaySmall)),
-      if (_travelers.isEmpty)
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: ZussGoTheme.cardDecoration,
-            child: Column(children: [const Text('🌍', style: TextStyle(fontSize: 28)), const SizedBox(height: 6), Text('No travelers yet', style: ZussGoTheme.labelBold), Text('Be the first!', style: ZussGoTheme.bodySmall)]))),
-
-      if (_travelers.isNotEmpty)
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Column(children: List.generate(_travelers.length, (i) {
-          final t = _travelers[i]; final u = t['user'] ?? {};
-          return GestureDetector(onTap: () => context.push('/traveler/${u['id']}', extra: {'tripId': t['tripId']}),
-              child: Container(padding: const EdgeInsets.all(10), margin: const EdgeInsets.only(bottom: 6), decoration: ZussGoTheme.glassCard,
-                  child: Row(children: [
-                    Container(width: 42, height: 42, decoration: BoxDecoration(color: _tc(i).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                        alignment: Alignment.center, child: Text((u['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _tc(i), fontFamily: 'Playfair Display'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${u['fullName'] ?? 'Unknown'}${u['age'] != null ? ', ${u['age']}' : ''}', style: ZussGoTheme.labelBold.copyWith(fontSize: 13)),
-                      Text('${u['city'] ?? 'Explorer'} • ${u['travelStyle'] ?? 'Adventurer'}', style: ZussGoTheme.bodySmall),
-                    ])),
-                    Icon(Icons.chevron_right_rounded, color: ZussGoTheme.textMuted, size: 18),
-                  ])));
-        }))),
-
-      const SizedBox(height: 20),
-    ])));
+    );
   }
 }

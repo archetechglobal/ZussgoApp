@@ -21,9 +21,10 @@ class ApiService {
     } catch (e) { return _error(); }
   }
 
-  static Future<Map<String, dynamic>> getDestinationBySlug(String slug) async {
+  static Future<Map<String, dynamic>> getDestinationBySlug(String slug, {String? userId}) async {
     try {
-      final response = await http.get(Uri.parse(ApiConfig.destinationBySlug(slug)), headers: _headers());
+      final query = userId != null ? "?userId=$userId" : "";
+      final response = await http.get(Uri.parse("${ApiConfig.destinationBySlug(slug)}$query"), headers: _headers());
       return _parse(response);
     } catch (e) { return _error(); }
   }
@@ -267,6 +268,39 @@ class ApiService {
       "data": data["data"],
       "statusCode": response.statusCode,
     };
+  }
+
+  static Future<Map<String, dynamic>> getUserProfile(String travelerId, {String? currentUserId}) async {
+    try {
+      final query = currentUserId != null ? "?userId=$currentUserId" : "";
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/auth/users/$travelerId$query"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> submitRating({
+    required String raterId,
+    required String rateeId,
+    required String tripId,
+    required int score,
+    String? review,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/ratings"),
+        headers: _headers(),
+        body: jsonEncode({
+          "raterId": raterId,
+          "rateeId": rateeId,
+          "tripId": tripId,
+          "score": score,
+          if (review != null && review.isNotEmpty) "review": review,
+        }),
+      );
+      return _parse(response);
+    } catch (e) {
+      return _error();
+    }
   }
 
   static Map<String, dynamic> _error() {

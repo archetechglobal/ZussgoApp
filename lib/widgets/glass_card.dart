@@ -26,7 +26,7 @@ class GlassCard extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: padding ?? const EdgeInsets.all(20),
-            decoration: decoration ?? ZussGoTheme.glassCard,
+            decoration: decoration ?? ZussGoTheme.glassCardDecoration(context),
             child: child,
           ),
         ),

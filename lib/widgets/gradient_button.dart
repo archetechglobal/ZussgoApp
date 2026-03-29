@@ -18,7 +18,7 @@ class GradientButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: ZussGoTheme.gradientPrimary,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Center(
           child: isLoading

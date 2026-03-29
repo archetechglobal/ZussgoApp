@@ -22,6 +22,9 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/safety/active_trip_screen.dart';
 import '../screens/feedback/trip_complete_screen.dart';
 import '../screens/search/smart_matches_screen.dart';
+import '../screens/settings/notifications_screen.dart';
+import '../screens/settings/help_support_screen.dart';
+import '../screens/settings/privacy_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
@@ -60,7 +63,13 @@ final GoRouter router = GoRouter(
     GoRoute(path: '/trips', builder: (context, state) => const MyTripsScreen()),
     GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
     GoRoute(path: '/active-trip', builder: (context, state) => const ActiveTripScreen()),
-    GoRoute(path: '/trip-complete', builder: (context, state) => const TripCompleteScreen()),
+    GoRoute(path: '/trip-complete', builder: (context, state) {
+      final e = state.extra as Map<String, dynamic>? ?? {};
+      return TripCompleteScreen(trip: e['trip'], ratee: e['ratee'], isGroup: e['isGroup'] ?? false);
+    }),
+    GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+    GoRoute(path: '/help-support', builder: (context, state) => const HelpSupportScreen()),
+    GoRoute(path: '/privacy', builder: (context, state) => const PrivacySafetyScreen()),
     GoRoute(
       path: '/smart-matches/:tripId',
       builder: (context, state) {

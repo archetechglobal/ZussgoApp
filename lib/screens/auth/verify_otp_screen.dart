@@ -43,38 +43,49 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   Future<void> _resendOtp() async {
     if (_resend > 0) return;
     final r = await AuthService.resendOtp(email: widget.email);
-    if (r["success"] == true) { _startTimer(); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Code sent to ${widget.email}'), backgroundColor: ZussGoTheme.green)); }
+    if (r["success"] == true) { _startTimer(); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Code sent to ${widget.email}'), backgroundColor: context.colors.green)); }
     else { setState(() => _error = r["message"]); }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GestureDetector(onTap: () => context.pop(), child: Container(width: 38, height: 38, decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary, size: 18))),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fallbackRoute = widget.type == 'signup' ? '/signup' : '/login';
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) context.pop();
+        else context.go(fallbackRoute);
+      },
+      child: Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        GestureDetector(onTap: () => context.canPop() ? context.pop() : context.go(fallbackRoute), child: Container(width: 38, height: 38, decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context), size: 18))),
       const SizedBox(height: 20),
-      Text('VERIFY EMAIL', style: TextStyle(fontSize: 11, color: ZussGoTheme.green, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+      Text('VERIFY EMAIL', style: TextStyle(fontSize: 11, color: context.colors.green, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
       const SizedBox(height: 6),
-      Text('Enter the\nCode', style: ZussGoTheme.displayLarge.copyWith(fontSize: 28)),
+      Text('Enter the\nCode', style: context.textTheme.displayLarge!.copyWith(fontSize: 28)),
       const SizedBox(height: 6),
-      RichText(text: TextSpan(text: 'Sent to ', style: ZussGoTheme.bodyMedium, children: [TextSpan(text: widget.email, style: TextStyle(color: ZussGoTheme.green, fontWeight: FontWeight.w600))])),
+      RichText(text: TextSpan(text: 'Sent to ', style: context.textTheme.bodyMedium!, children: [TextSpan(text: widget.email, style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w600))])),
       const SizedBox(height: 28),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: List.generate(6, (i) => SizedBox(width: 46, height: 54, child: TextField(
         controller: _c[i], focusNode: _f[i], textAlign: TextAlign.center, keyboardType: TextInputType.number, maxLength: 1,
-        style: ZussGoTheme.displaySmall.copyWith(fontSize: 20, color: ZussGoTheme.textPrimary),
+        style: context.textTheme.displaySmall!.copyWith(fontSize: 20, color: ZussGoTheme.primaryText(context)),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(counterText: "", contentPadding: const EdgeInsets.symmetric(vertical: 14), filled: true, fillColor: ZussGoTheme.bgMuted,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: ZussGoTheme.green.withValues(alpha: 0.5), width: 1.5))),
+        decoration: InputDecoration(counterText: "", contentPadding: const EdgeInsets.symmetric(vertical: 14), filled: true, fillColor: ZussGoTheme.mutedBg(context),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: isDark ? BorderSide(color: ZussGoTheme.border(context), width: 1.5) : BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: isDark ? BorderSide(color: ZussGoTheme.border(context), width: 1.5) : BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.5), width: 1.5))),
         onChanged: (v) { if (v.isNotEmpty && i < 5) _f[i + 1].requestFocus(); if (v.isEmpty && i > 0) _f[i - 1].requestFocus(); if (_otp.length == 6) _verify(); },
       )))),
       if (_error != null) Container(width: double.infinity, padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(top: 14),
-          decoration: BoxDecoration(color: ZussGoTheme.rose.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
-          child: Row(children: [Icon(Icons.info_outline_rounded, color: ZussGoTheme.rose, size: 16), const SizedBox(width: 6), Expanded(child: Text(_error!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 11)))])),
+          decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: isDark ? 0.15 : 0.06), border: isDark ? Border.all(color: context.colors.rose.withValues(alpha: 0.3)) : null, borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [Icon(Icons.info_outline_rounded, color: context.colors.rose, size: 16), SizedBox(width: 6), Expanded(child: Text(_error!, style: TextStyle(color: isDark ? const Color(0xFFFFAEB4) : context.colors.rose, fontSize: 11)))])),
       const SizedBox(height: 24),
       GradientButton(text: 'Verify', isLoading: _loading, onPressed: _verify),
       const SizedBox(height: 18),
-      Center(child: GestureDetector(onTap: _resend == 0 ? _resendOtp : null, child: RichText(text: TextSpan(text: "Didn't receive? ", style: ZussGoTheme.bodySmall,
-          children: [TextSpan(text: _resend > 0 ? 'Resend in ${_resend}s' : 'Resend code', style: TextStyle(color: _resend > 0 ? ZussGoTheme.textMuted : ZussGoTheme.green, fontWeight: FontWeight.w600))])))),
-    ]))));
+      Center(child: GestureDetector(onTap: _resend == 0 ? _resendOtp : null, child: RichText(text: TextSpan(text: "Didn't receive? ", style: context.textTheme.bodySmall!.adaptive(context),
+          children: [TextSpan(text: _resend > 0 ? 'Resend in ${_resend}s' : 'Resend code', style: TextStyle(color: _resend > 0 ? context.colors.textMuted : context.colors.green, fontWeight: FontWeight.w600))])))),
+    ])))));
   }
 }

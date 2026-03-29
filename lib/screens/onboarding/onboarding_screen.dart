@@ -18,19 +18,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pages = [
     _OnboardingPage(
       gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF22D3EE)]),
-      emoji: '🧳',
+      icon: Icons.luggage_rounded,
       title: 'Post Where\nYou\'re Going',
       subtitle: 'Share your destination & dates. Let other travelers find you and connect.',
     ),
     _OnboardingPage(
       gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFBBF24)]),
-      emoji: '🤝',
+      icon: Icons.people_alt_rounded,
       title: 'Find Your\nPerfect Match',
       subtitle: 'Filter by age, mindset, travel style & budget. See compatibility scores.',
     ),
     _OnboardingPage(
       gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-      emoji: '💬',
+      icon: Icons.chat_bubble_rounded,
       title: 'Solo or Group\n— You Choose',
       subtitle: 'Match 1-on-1 or join group trips with 3+ travelers. Chat, plan & go together.',
     ),
@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ZussGoTheme.bgPrimary,
+      backgroundColor: ZussGoTheme.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -85,13 +85,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                             child: Stack(
                               children: [
-                                Center(child: Opacity(opacity: 0.12, child: Text(page.emoji, style: const TextStyle(fontSize: 120)))),
+                                Center(child: Opacity(opacity: 0.12, child: Icon(page.icon, size: 120, color: Colors.white))),
                                 Positioned(
                                   bottom: 20, left: 20,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                                    child: Text(page.emoji, style: const TextStyle(fontSize: 24)),
+                                    child: Icon(page.icon, size: 24, color: Colors.white),
                                   ),
                                 ),
                               ],
@@ -117,16 +117,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       width: isActive ? 24 : 8,
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: isActive ? ZussGoTheme.green : ZussGoTheme.borderDefault,
+                                        color: isActive ? context.colors.green : ZussGoTheme.borderDefault,
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                     );
                                   }),
                                 ),
                                 const SizedBox(height: 20),
-                                Text(page.title, style: ZussGoTheme.displayLarge.copyWith(fontSize: 28), textAlign: TextAlign.center),
+                                Text(page.title, style: context.textTheme.displayLarge!.copyWith(fontSize: 28), textAlign: TextAlign.center),
                                 const SizedBox(height: 10),
-                                Text(page.subtitle, style: ZussGoTheme.bodyMedium, textAlign: TextAlign.center),
+                                Text(page.subtitle, style: context.textTheme.bodyMedium!, textAlign: TextAlign.center),
                                 const Spacer(),
                                 GradientButton(
                                   text: _currentPage == 2 ? 'Get Started' : 'Next →',
@@ -139,8 +139,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: 'Already have an account? ',
-                                        style: ZussGoTheme.bodySmall,
-                                        children: [TextSpan(text: 'Sign In', style: TextStyle(color: ZussGoTheme.green, fontWeight: FontWeight.w600))],
+                                        style: context.textTheme.bodySmall!.adaptive(context),
+                                        children: [TextSpan(text: 'Sign In', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w600))],
                                       ),
                                     ),
                                   ),
@@ -165,8 +165,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingPage {
   final LinearGradient gradient;
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
-  const _OnboardingPage({required this.gradient, required this.emoji, required this.title, required this.subtitle});
+  const _OnboardingPage({required this.gradient, required this.icon, required this.title, required this.subtitle});
 }

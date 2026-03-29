@@ -30,25 +30,43 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigate() async {
+    debugPrint('SPLASH: Navigation timer started (3s)...');
     await Future.delayed(const Duration(seconds: 3));
+    debugPrint('SPLASH: Timer finished. Mounted: $mounted');
     if (!mounted) return;
 
     try {
+      debugPrint('SPLASH: Checking onboarding status...');
       final hasSeenOnboarding = await AuthService.hasSeenOnboarding();
-      if (!hasSeenOnboarding) { if (mounted) context.go('/onboarding'); return; }
+      debugPrint('SPLASH: hasSeenOnboarding: $hasSeenOnboarding');
+      if (!hasSeenOnboarding) { 
+        debugPrint('SPLASH: Navigating to Onboarding');
+        if (mounted) context.go('/onboarding'); return; 
+      }
 
+      debugPrint('SPLASH: Checking session...');
       final hasSession = await AuthService.hasSession();
+      debugPrint('SPLASH: hasSession: $hasSession');
+      
       if (hasSession) {
+        debugPrint('SPLASH: Getting saved user...');
         final user = await AuthService.getSavedUser();
+        debugPrint('SPLASH: Saved user: ${user?['email'] ?? 'null'}');
+        
         if (user != null && user['isProfileCompleted'] == true) {
+          debugPrint('SPLASH: Navigating to Home');
           if (mounted) context.go('/home');
         } else {
+          debugPrint('SPLASH: Navigating to Profile Setup');
           if (mounted) context.go('/profile-setup');
         }
       } else {
+        debugPrint('SPLASH: No session. Navigating to Login');
         if (mounted) context.go('/login');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('SPLASH ERROR: $e');
+      debugPrint('SPLASH STACK: $stack');
       if (mounted) context.go('/login');
     }
   }
@@ -72,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           Center(
             child: Opacity(
               opacity: 0.08,
-              child: Text('🌍', style: TextStyle(fontSize: 200)),
+              child: Icon(Icons.travel_explore_rounded, size: 120, color: Colors.white.withValues(alpha: 0.15)),
             ),
           ),
 
@@ -99,12 +117,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       'Explore Your\nFavorite Journey',
-                      style: ZussGoTheme.displayLarge.copyWith(color: Colors.white, fontSize: 34),
+                      style: context.textTheme.displayLarge!.copyWith(color: Colors.white, fontSize: 34),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Together We Go',
-                      style: ZussGoTheme.bodyLarge.copyWith(color: Colors.white.withValues(alpha: 0.5)),
+                      style: context.textTheme.bodyLarge!.copyWith(color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     const SizedBox(height: 24),
                     Center(

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../config/theme.dart';
 
 /// Custom painter for the ZussGo logo.
 /// Two person silhouettes connected by a mint arc,
 /// travel route below, small plane at top.
 class ZussGoLogoPainter extends CustomPainter {
+  final Color mintColor;
+
+  ZussGoLogoPainter({required this.mintColor});
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
@@ -46,7 +49,7 @@ class ZussGoLogoPainter extends CustomPainter {
 
     // ── Mint connection arc ──
     final arcPaint = Paint()
-      ..color = ZussGoTheme.mint.withValues(alpha: 0.6)
+      ..color = mintColor.withValues(alpha: 0.6)
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

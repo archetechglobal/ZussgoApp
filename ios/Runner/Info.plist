@@ -66,5 +66,34 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- location permissions (geolocator) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Zussgo requires access to your location when in use to track active trips and share your position during emergencies.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Zussgo requires continuous access to your location to update emergency contacts if your trip deviates from the planned route.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Zussgo needs constant background location updates to ensure your safety during an active trip.</string>
+
+	<!-- URLLauncher configurations for iOS 14+ -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>tel</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
+
+	<!-- Camera / Image permissions (image_picker) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Zussgo needs to access your camera so you can take and upload a profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Zussgo needs to access your photo library so you can choose an existing photo for your profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zussgo requires microphone access for video capture if needed for safe recording.</string>
+
+	<!-- Contacts -->
+	<key>NSContactsUsageDescription</key>
+	<string>Zussgo requires access to contacts so you can quickly add emergency contacts.</string>
 </dict>
 </plist>

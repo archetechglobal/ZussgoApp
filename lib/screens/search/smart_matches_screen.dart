@@ -57,11 +57,11 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
   }
 
   Color _scoreColor(double score) {
-    if (score >= 85) return ZussGoTheme.mint;
-    if (score >= 70) return ZussGoTheme.amber;
+    if (score >= 85) return context.colors.mint;
+    if (score >= 70) return context.colors.amber;
     if (score >= 55) return const Color(0xFF38BDF8);
     if (score >= 40) return ZussGoTheme.lavender;
-    return ZussGoTheme.textMuted;
+    return context.colors.textMuted;
   }
 
   String _formatDate(String? dateStr) {
@@ -85,7 +85,7 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 GestureDetector(
                   onTap: () => context.pop(),
-                  child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary),
+                  child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context)),
                 ),
                 const SizedBox(height: 12),
                 Row(children: [
@@ -93,8 +93,8 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Smart Matches', style: ZussGoTheme.displaySmall),
-                      Text('Travelers heading to ${widget.destinationName}', style: ZussGoTheme.bodySmall),
+                      Text('Smart Matches', style: context.textTheme.displaySmall!.adaptive(context)),
+                      Text('Travelers heading to ${widget.destinationName}', style: context.textTheme.bodySmall!.adaptive(context)),
                     ]),
                   ),
                 ]),
@@ -107,48 +107,48 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _preferSameGender ? ZussGoTheme.amber.withValues(alpha: 0.1) : ZussGoTheme.bgSecondary,
+                        color: _preferSameGender ? context.colors.amber.withValues(alpha: 0.1) : ZussGoTheme.bgSecondary,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _preferSameGender ? ZussGoTheme.amber.withValues(alpha: 0.3) : ZussGoTheme.borderDefault),
+                        border: Border.all(color: _preferSameGender ? context.colors.amber.withValues(alpha: 0.3) : ZussGoTheme.borderDefault),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(
                           _preferSameGender ? Icons.check_circle_rounded : Icons.circle_outlined,
                           size: 16,
-                          color: _preferSameGender ? ZussGoTheme.amber : ZussGoTheme.textMuted,
+                          color: _preferSameGender ? context.colors.amber : context.colors.textMuted,
                         ),
                         const SizedBox(width: 6),
-                        Text('Same gender', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _preferSameGender ? ZussGoTheme.amber : ZussGoTheme.textMuted)),
+                        Text('Same gender', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _preferSameGender ? context.colors.amber : context.colors.textMuted)),
                       ]),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(color: ZussGoTheme.bgSecondary, borderRadius: BorderRadius.circular(10), border: Border.all(color: ZussGoTheme.borderDefault)),
-                    child: Text('${_matches.length} found', style: TextStyle(fontSize: 12, color: ZussGoTheme.textMuted, fontWeight: FontWeight.w500)),
+                    decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(10), border: Border.all(color: ZussGoTheme.border(context))),
+                    child: Text('${_matches.length} found', style: TextStyle(fontSize: 12, color: ZussGoTheme.mutedText(context), fontWeight: FontWeight.w500)),
                   ),
                 ]),
                 const SizedBox(height: 12),
               ]),
             ),
 
-            const Divider(color: ZussGoTheme.borderDefault, height: 1),
+            Divider(color: ZussGoTheme.border(context), height: 1),
 
             // Results
             Expanded(
               child: _isLoading
-                  ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.amber.withValues(alpha: 0.5)))
+                  ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.amber.withValues(alpha: 0.5)))
                   : _matches.isEmpty
                   ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Text('🔍', style: TextStyle(fontSize: 40)),
+                    Icon(Icons.person_search_rounded, size: 48, color: context.colors.green.withValues(alpha: 0.4)),
                     const SizedBox(height: 12),
-                    Text('No matches yet', style: ZussGoTheme.displaySmall),
+                    Text('No matches yet', style: context.textTheme.displaySmall!.adaptive(context)),
                     const SizedBox(height: 8),
-                    Text('Be patient — as more travelers plan trips to ${widget.destinationName}, your matches will appear here.', style: ZussGoTheme.bodySmall, textAlign: TextAlign.center),
+                    Text('Be patient — as more travelers plan trips to ${widget.destinationName}, your matches will appear here.', style: context.textTheme.bodySmall!.adaptive(context), textAlign: TextAlign.center),
                   ]),
                 ),
               )
@@ -167,7 +167,7 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: ZussGoTheme.bgSecondary,
+                      color: ZussGoTheme.cardBg(context),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: score >= 70 ? color.withValues(alpha: 0.15) : ZussGoTheme.borderDefault),
                     ),
@@ -181,7 +181,7 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                         ),
                         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                           Row(children: [
-                            Text(label['emoji'] ?? '🌱', style: const TextStyle(fontSize: 16)),
+                            Icon(Icons.eco_rounded, size: 16, color: color),
                             const SizedBox(width: 6),
                             Text(label['label'] ?? 'Match', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
                           ]),
@@ -213,12 +213,13 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                             ),
                             const SizedBox(width: 14),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('${traveler['fullName'] ?? 'Unknown'}${traveler['age'] != null ? ', ${traveler['age']}' : ''}', style: ZussGoTheme.labelBold),
-                              Text('${traveler['city'] ?? 'Explorer'} • ${traveler['travelStyle'] ?? 'Unknown style'}', style: ZussGoTheme.bodySmall),
+                              Text('${traveler['fullName'] ?? 'Unknown'}${traveler['age'] != null ? ', ${traveler['age']}' : ''}', style: context.textTheme.labelLarge!.adaptive(context)),
+                              Text('${traveler['city'] ?? 'Explorer'} • ${traveler['travelStyle'] ?? 'Unknown style'}', style: context.textTheme.bodySmall!.adaptive(context)),
                               if (traveler['totalRatings'] != null && traveler['totalRatings'] > 0)
                                 Row(children: [
-                                  const Text('⭐ ', style: TextStyle(fontSize: 11)),
-                                  Text('${traveler['averageRating']} (${traveler['totalRatings']} trips)', style: TextStyle(fontSize: 11, color: ZussGoTheme.amber)),
+                                  Icon(Icons.star_rounded, size: 13, color: context.colors.amber),
+                                  const SizedBox(width: 2),
+                                  Text('${traveler['averageRating']} (${traveler['totalRatings']} trips)', style: TextStyle(fontSize: 11, color: context.colors.amber)),
                                 ]),
                             ])),
                           ]),
@@ -227,14 +228,14 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                           // Dates
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: ZussGoTheme.bgPrimary, borderRadius: BorderRadius.circular(12)),
+                            decoration: BoxDecoration(color: ZussGoTheme.scaffoldBg(context), borderRadius: BorderRadius.circular(12)),
                             child: Row(children: [
-                              Icon(Icons.calendar_month_rounded, size: 14, color: ZussGoTheme.textMuted),
+                              Icon(Icons.calendar_month_rounded, size: 14, color: ZussGoTheme.mutedText(context)),
                               const SizedBox(width: 6),
-                              Text('${_formatDate(traveler['startDate'])} — ${_formatDate(traveler['endDate'])}', style: TextStyle(fontSize: 12, color: ZussGoTheme.textSecondary)),
+                              Text('${_formatDate(traveler['startDate'])} — ${_formatDate(traveler['endDate'])}', style: TextStyle(fontSize: 12, color: ZussGoTheme.secondaryText(context))),
                               const Spacer(),
                               if (traveler['budget'] != null)
-                                Text(traveler['budget'], style: TextStyle(fontSize: 11, color: ZussGoTheme.textMuted, fontWeight: FontWeight.w500)),
+                                Text(traveler['budget'], style: TextStyle(fontSize: 11, color: ZussGoTheme.mutedText(context), fontWeight: FontWeight.w500)),
                             ]),
                           ),
                           const SizedBox(height: 12),
@@ -257,24 +258,24 @@ class _SmartMatchesScreenState extends State<SmartMatchesScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                color: ZussGoTheme.mint.withValues(alpha: 0.06),
+                                color: context.colors.mint.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: ZussGoTheme.mint.withValues(alpha: 0.12)),
+                                border: Border.all(color: context.colors.mint.withValues(alpha: 0.12)),
                               ),
                               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                Icon(Icons.check_circle_rounded, color: ZussGoTheme.mint, size: 16),
+                                Icon(Icons.check_circle_rounded, color: context.colors.mint, size: 16),
                                 const SizedBox(width: 6),
-                                Text('Request Sent', style: TextStyle(color: ZussGoTheme.mint, fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text('Request Sent', style: TextStyle(color: context.colors.mint, fontWeight: FontWeight.w600, fontSize: 13)),
                               ]),
                             )
                           else
                             GestureDetector(
-                              onTap: () => context.push('/traveler/${traveler['userId']}', extra: {'tripId': traveler['tripId']}),
+                              onTap: () => context.push('/traveler/${traveler['userId']}', extra: {'tripId': traveler['tripId'], 'score': score}),
                               child: Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(14)),
-                                child: Text("Let's Go Together 🤝", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                                child: const Text("Let's Go Together", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                               ),
                             ),
                         ]),
@@ -304,7 +305,7 @@ class _ScorePill extends StatelessWidget {
     final percent = (value / max).clamp(0.0, 1.0);
     return Expanded(
       child: Column(children: [
-        Text(label, style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(fontSize: 9, color: ZussGoTheme.mutedText(context), fontWeight: FontWeight.w500)),
         const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
@@ -312,13 +313,13 @@ class _ScorePill extends StatelessWidget {
             height: 4,
             child: LinearProgressIndicator(
               value: percent,
-              backgroundColor: ZussGoTheme.bgPrimary,
+              backgroundColor: ZussGoTheme.scaffoldBg(context),
               valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: 0.6)),
             ),
           ),
         ),
         const SizedBox(height: 2),
-        Text('${value.round()}/${max.round()}', style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted)),
+        Text('${value.round()}/${max.round()}', style: TextStyle(fontSize: 9, color: ZussGoTheme.mutedText(context))),
       ]),
     );
   }

@@ -76,30 +76,30 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: SafeArea(child: Column(children: [
+    return Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: SafeArea(child: Column(children: [
       // Header
-      Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: ZussGoTheme.borderDefault))),
+      Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ZussGoTheme.border(context)))),
           child: Row(children: [
-            GestureDetector(onTap: () => context.pop(), child: Container(width: 34, height: 34, decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary, size: 18))),
+            GestureDetector(onTap: () => context.pop(), child: Container(width: 34, height: 34, decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context), size: 18))),
             const SizedBox(width: 10),
-            Container(width: 38, height: 38, decoration: BoxDecoration(color: ZussGoTheme.sky.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                alignment: Alignment.center, child: Text(_otherInitial ?? '?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZussGoTheme.sky, fontFamily: 'Playfair Display'))),
+            Container(width: 38, height: 38, decoration: BoxDecoration(color: context.colors.sky.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+                alignment: Alignment.center, child: Text(_otherInitial ?? '?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.colors.sky, fontFamily: 'Playfair Display'))),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [Text(_otherName ?? '...', style: ZussGoTheme.labelBold.copyWith(fontSize: 13)), const SizedBox(width: 4), Container(width: 6, height: 6, decoration: const BoxDecoration(color: ZussGoTheme.mint, shape: BoxShape.circle))]),
-              if (_typing) Text('typing...', style: TextStyle(fontSize: 10, color: ZussGoTheme.green, fontStyle: FontStyle.italic))
-              else if (_tripInfo != null) Text(_tripInfo!, style: ZussGoTheme.bodySmall),
+              Row(children: [Text(_otherName ?? '...', style: context.textTheme.labelLarge!.copyWith(fontSize: 13)), SizedBox(width: 4), Container(width: 6, height: 6, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle))]),
+              if (_typing) Text('typing...', style: TextStyle(fontSize: 10, color: context.colors.green, fontStyle: FontStyle.italic))
+              else if (_tripInfo != null) Text(_tripInfo!, style: context.textTheme.bodySmall!.adaptive(context)),
             ])),
           ])),
 
       // Trip banner
-      if (_tripInfo != null) Container(margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(color: ZussGoTheme.greenLight, borderRadius: BorderRadius.circular(12)),
-          child: Row(children: [const Text('✈️', style: TextStyle(fontSize: 13)), const SizedBox(width: 6), Text('Traveling together to $_tripInfo', style: TextStyle(fontSize: 11, color: ZussGoTheme.green, fontWeight: FontWeight.w500))])),
+      if (_tripInfo != null) Container(margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(color: context.colors.green.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: context.colors.green.withValues(alpha: 0.15), width: 1)),
+          child: Row(children: [Icon(Icons.flight_rounded, size: 14, color: context.colors.green), SizedBox(width: 8), Expanded(child: Text('Traveling together to $_tripInfo', style: TextStyle(fontSize: 12, color: context.colors.green, fontWeight: FontWeight.w500, fontFamily: 'Outfit')))])),
 
       // Messages
-      Expanded(child: _loading ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.green))
-          : _messages.isEmpty ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('👋', style: TextStyle(fontSize: 36)), const SizedBox(height: 10), Text('Say hello!', style: ZussGoTheme.displaySmall), Text('Start planning together', style: ZussGoTheme.bodySmall)]))
+      Expanded(child: _loading ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green))
+          : _messages.isEmpty ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.waving_hand_rounded, size: 40, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4)), SizedBox(height: 10), Text('Say hello!', style: context.textTheme.displaySmall!.adaptive(context)), Text('Start planning together', style: context.textTheme.bodySmall!.adaptive(context))]))
           : ListView.builder(controller: _scrollC, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), itemCount: _messages.length, itemBuilder: (_, i) {
         final m = _messages[i]; final isMe = m['senderId'] == _userId; final isTemp = m['id'].toString().startsWith('temp_');
         return Align(alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -108,29 +108,34 @@ class _ChatScreenState extends State<ChatScreen> {
                   Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         gradient: isMe ? ZussGoTheme.gradientPrimary : null,
-                        color: isMe ? null : ZussGoTheme.bgMuted,
+                        color: isMe ? null : ZussGoTheme.mutedBg(context),
                         borderRadius: BorderRadius.only(topLeft: const Radius.circular(18), topRight: const Radius.circular(18), bottomLeft: Radius.circular(isMe ? 18 : 4), bottomRight: Radius.circular(isMe ? 4 : 18)),
-                        boxShadow: isMe ? [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2))] : null,
+                        boxShadow: isMe ? [BoxShadow(color: context.colors.green.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 2))] : null,
                       ),
-                      child: Text(m['content'] ?? '', style: TextStyle(fontFamily: 'Outfit', fontSize: 13, color: isMe ? Colors.white : ZussGoTheme.textPrimary, height: 1.45))),
+                      child: Text(m['content'] ?? '', style: TextStyle(fontFamily: 'Outfit', fontSize: 13, color: isMe ? Colors.white : ZussGoTheme.primaryText(context), height: 1.45))),
                   const SizedBox(height: 3),
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_fmtTime(m['createdAt']), style: TextStyle(fontSize: 9, color: ZussGoTheme.textMuted)),
-                    if (isMe && !isTemp) ...[const SizedBox(width: 3), Icon(Icons.done_rounded, size: 11, color: ZussGoTheme.green.withValues(alpha: 0.5))],
-                    if (isMe && isTemp) ...[const SizedBox(width: 3), Icon(Icons.schedule_rounded, size: 9, color: ZussGoTheme.textMuted.withValues(alpha: 0.5))],
+                    Text(_fmtTime(m['createdAt']), style: TextStyle(fontSize: 9, color: ZussGoTheme.mutedText(context))),
+                    if (isMe && !isTemp) ...[SizedBox(width: 3), Icon(Icons.done_rounded, size: 11, color: context.colors.green.withValues(alpha: 0.5))],
+                    if (isMe && isTemp) ...[const SizedBox(width: 3), Icon(Icons.schedule_rounded, size: 9, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.5))],
                   ]),
                 ])));
       })),
 
       // Input
-      Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(border: Border(top: BorderSide(color: ZussGoTheme.borderDefault))),
+      Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: BoxDecoration(border: Border(top: BorderSide(color: ZussGoTheme.border(context)))),
           child: Row(children: [
             Expanded(child: TextField(controller: _msgC,
-                decoration: InputDecoration(hintText: 'Type a message...', hintStyle: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textMuted), filled: true, fillColor: ZussGoTheme.bgMuted,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10)),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary), onChanged: (_) => ChatService.sendTyping(widget.matchId), onSubmitted: (_) => _send(), textInputAction: TextInputAction.send)),
+                decoration: InputDecoration(hintText: 'Type a message...', hintStyle: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.mutedText(context)), filled: true, fillColor: ZussGoTheme.mutedBg(context),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: ZussGoTheme.border(context), width: 1)), 
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: ZussGoTheme.border(context), width: 1)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.5), width: 1.5)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10)),
+                style: TextStyle(fontFamily: 'Outfit', fontSize: 14, color: ZussGoTheme.primaryText(context), height: 1.4),
+                cursorColor: context.colors.green,
+                onChanged: (_) => ChatService.sendTyping(widget.matchId), onSubmitted: (_) => _send(), textInputAction: TextInputAction.send)),
             const SizedBox(width: 8),
-            GestureDetector(onTap: _send, child: Container(width: 42, height: 42, decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]),
+            GestureDetector(onTap: _send, child: Container(width: 42, height: 42, decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, shape: BoxShape.circle, boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]),
                 child: const Icon(Icons.send_rounded, color: Colors.white, size: 18))),
           ])),
     ])));

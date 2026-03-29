@@ -42,8 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: ZussGoTheme.bgPrimary,
+      backgroundColor: ZussGoTheme.scaffoldBg(context),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
@@ -56,34 +57,34 @@ class _LoginScreenState extends State<LoginScreen> {
               child: const Text('Z', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 22, fontFamily: 'Playfair Display')),
             ),
             const SizedBox(height: 24),
-            Text('Welcome\nBack', style: ZussGoTheme.displayLarge),
+            Text('Welcome\nBack', style: context.textTheme.displayLarge!.adaptive(context)),
             const SizedBox(height: 8),
-            Text('Sign in to continue your journey', style: ZussGoTheme.bodyLarge),
+            Text('Sign in to continue your journey', style: context.textTheme.bodyLarge!.adaptive(context)),
             const SizedBox(height: 32),
 
-            Text('Email', style: ZussGoTheme.labelBold.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13)),
+            Text('Email', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
             const SizedBox(height: 8),
             TextField(
               controller: _emailC,
-              decoration: ZussGoTheme.inputDecoration(hint: 'arjun@email.com', prefix: Icon(Icons.mail_outline_rounded, color: ZussGoTheme.textMuted, size: 20)),
-              style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+              decoration: ZussGoTheme.inputDecorationOf(context, hint: 'arjun@email.com', prefix: Icon(Icons.mail_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20)),
+              style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 18),
 
-            Text('Password', style: ZussGoTheme.labelBold.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13)),
+            Text('Password', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
             const SizedBox(height: 8),
             TextField(
               controller: _passC,
-              decoration: ZussGoTheme.inputDecoration(
+              decoration: ZussGoTheme.inputDecorationOf(context, 
                 hint: '••••••••',
-                prefix: Icon(Icons.lock_outline_rounded, color: ZussGoTheme.textMuted, size: 20),
+                prefix: Icon(Icons.lock_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20),
                 suffix: GestureDetector(
                   onTap: () => setState(() => _obscure = !_obscure),
-                  child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: ZussGoTheme.textMuted, size: 20),
+                  child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: ZussGoTheme.mutedText(context), size: 20),
                 ),
               ),
-              style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+              style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
               obscureText: _obscure,
               onSubmitted: (_) => _login(),
             ),
@@ -96,29 +97,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     width: 20, height: 20,
                     decoration: BoxDecoration(
-                      color: _rememberMe ? ZussGoTheme.green : Colors.transparent,
+                      color: _rememberMe ? context.colors.green : Colors.transparent,
                       borderRadius: BorderRadius.circular(6),
-                      border: _rememberMe ? null : Border.all(color: ZussGoTheme.borderDefault, width: 1.5),
+                      border: _rememberMe ? null : Border.all(color: ZussGoTheme.border(context), width: 1.5),
                     ),
                     child: _rememberMe ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
                   ),
                   const SizedBox(width: 8),
-                  Text('Remember me', style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.textSecondary)),
+                  Text('Remember me', style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.secondaryText(context))),
                 ]),
               ),
               GestureDetector(
                 onTap: () => context.push('/forgot-password'),
-                child: Text('Forgot Password?', style: TextStyle(fontSize: 12, color: ZussGoTheme.green, fontWeight: FontWeight.w600)),
+                child: Text('Forgot Password?', style: TextStyle(fontSize: 12, color: context.colors.green, fontWeight: FontWeight.w600)),
               ),
             ]),
 
             if (_error != null)
               Container(
                 width: double.infinity, padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(color: ZussGoTheme.rose.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: isDark ? 0.15 : 0.06), border: isDark ? Border.all(color: context.colors.rose.withValues(alpha: 0.3)) : null, borderRadius: BorderRadius.circular(12)),
                 child: Row(children: [
-                  Icon(Icons.info_outline_rounded, color: ZussGoTheme.rose, size: 18), const SizedBox(width: 8),
-                  Expanded(child: Text(_error!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 12, fontWeight: FontWeight.w500))),
+                  Icon(Icons.info_outline_rounded, color: context.colors.rose, size: 18), SizedBox(width: 8),
+                  Expanded(child: Text(_error!, style: TextStyle(color: isDark ? const Color(0xFFFFAEB4) : context.colors.rose, fontSize: 12, fontWeight: FontWeight.w500))),
                 ]),
               ),
 
@@ -128,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Center(
               child: GestureDetector(
                 onTap: () => context.push('/signup'),
-                child: RichText(text: TextSpan(text: "Don't have an account? ", style: ZussGoTheme.bodyMedium, children: [TextSpan(text: 'Sign Up', style: TextStyle(color: ZussGoTheme.green, fontWeight: FontWeight.w700))])),
+                child: RichText(text: TextSpan(text: "Don't have an account? ", style: context.textTheme.bodyMedium!, children: [TextSpan(text: 'Sign Up', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w700))])),
               ),
             ),
           ]),

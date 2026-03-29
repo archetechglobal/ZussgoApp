@@ -28,14 +28,14 @@ class TravelerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? ZussGoTheme.amber;
+    final color = accentColor ?? context.colors.amber;
 
     return GestureDetector(
       onTap: () => context.push('/traveler/$id'),
       child: Container(
         padding: const EdgeInsets.all(14),
         margin: const EdgeInsets.only(bottom: 10),
-        decoration: ZussGoTheme.glassCard,
+        decoration: ZussGoTheme.glassCardDecoration(context),
         child: Row(
           children: [
             // Monogram avatar
@@ -66,14 +66,14 @@ class TravelerCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('$name, $age', style: ZussGoTheme.labelBold),
+                      Text('$name, $age', style: context.textTheme.labelLarge!.adaptive(context)),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              ZussGoTheme.amber.withValues(alpha: 0.1),
-                              ZussGoTheme.rose.withValues(alpha: 0.1),
+                              context.colors.amber.withValues(alpha: 0.1),
+                              context.colors.rose.withValues(alpha: 0.1),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -83,25 +83,25 @@ class TravelerCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: ZussGoTheme.amber,
+                            color: context.colors.amber,
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text('$destination • $dates', style: ZussGoTheme.bodySmall),
+                  Text('$destination • $dates', style: context.textTheme.bodySmall!.adaptive(context)),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: ZussGoTheme.bgCard,
+                      color: context.colors.bgCard,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: ZussGoTheme.borderDefault),
+                      border: Border.all(color: context.colors.border),
                     ),
                     child: Text(
                       travelStyle,
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: ZussGoTheme.textMuted),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: context.colors.textMuted),
                     ),
                   ),
                 ],

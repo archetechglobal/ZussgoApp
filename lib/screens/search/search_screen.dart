@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
+import '../../services/destination_images.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -16,81 +17,235 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isLoading = true;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   @override
-  void dispose() { _searchC.dispose(); super.dispose(); }
+  void dispose() {
+    _searchC.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
     final r = await ApiService.getDestinations();
-    if (mounted) setState(() { _isLoading = false; if (r["success"] == true && r["data"] != null) _destinations = List<Map<String, dynamic>>.from(r["data"]); });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (r['success'] == true && r['data'] != null) {
+          _destinations = List<Map<String, dynamic>>.from(r['data']);
+          _destinations.sort((a, b) {
+            final hasA = DestinationImages.getImageFromData(a) != null;
+            final hasB = DestinationImages.getImageFromData(b) != null;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _search(String q) async {
     if (q.length < 2) { _load(); return; }
     setState(() => _isLoading = true);
     final r = await ApiService.searchDestinations(q);
-    if (mounted) setState(() { _isLoading = false; if (r["success"] == true && r["data"] != null) _destinations = List<Map<String, dynamic>>.from(r["data"]); });
-  }
-
-  LinearGradient _dg(int i) {
-    const gs = [LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF22D3EE)]), LinearGradient(colors: [Color(0xFF059669), Color(0xFF34D399)]),
-      LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFBBF24)]), LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-      LinearGradient(colors: [Color(0xFFDB2777), Color(0xFFF472B6)]), LinearGradient(colors: [Color(0xFF047857), Color(0xFF10B981)])];
-    return gs[i % gs.length];
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (r['success'] == true && r['data'] != null) {
+          _destinations = List<Map<String, dynamic>>.from(r['data']);
+          _destinations.sort((a, b) {
+            final hasA = DestinationImages.getImageFromData(a) != null;
+            final hasB = DestinationImages.getImageFromData(b) != null;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          });
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: ZussGoTheme.bgPrimary, body: Stack(children: [
-      SafeArea(bottom: false, child: SingleChildScrollView(padding: const EdgeInsets.only(bottom: 90), child: Padding(padding: const EdgeInsets.fromLTRB(22, 8, 22, 0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          GestureDetector(onTap: () => context.go('/home'), child: Container(width: 38, height: 38, decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary, size: 18))),
-          const SizedBox(width: 10),
-          Expanded(child: TextField(controller: _searchC,
-              decoration: InputDecoration(hintText: 'Search destinations...', prefixIcon: Icon(Icons.search_rounded, color: ZussGoTheme.textMuted, size: 18), filled: true, fillColor: ZussGoTheme.bgMuted, contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: ZussGoTheme.green.withValues(alpha: 0.3)))),
-              style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary), onChanged: _search)),
-        ]),
-        const SizedBox(height: 18),
-        Text(_searchC.text.isEmpty ? 'All Destinations' : 'Search Results', style: ZussGoTheme.displaySmall),
-        const SizedBox(height: 12),
+    final bgPage  = ZussGoTheme.scaffoldBg(context);
+    final bgMuted = ZussGoTheme.mutedBg(context);
+    final bgCard  = ZussGoTheme.cardBg(context);
+    final textPri = ZussGoTheme.primaryText(context);
+    final textMut = ZussGoTheme.mutedText(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
 
-        if (_isLoading) Padding(padding: const EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.green))),
+    return Scaffold(
+      backgroundColor: bgPage,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 90),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Search Bar ──
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => context.go('/home'),
+                          child: Container(
+                            width: 38, height: 38,
+                            decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(12)),
+                            child: Icon(Icons.arrow_back_rounded, color: textMut, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchC,
+                            style: context.textTheme.bodyMedium!.copyWith(color: textPri),
+                            decoration: InputDecoration(
+                              hintText: 'Search destinations...',
+                              hintStyle: context.textTheme.bodyMedium!.copyWith(color: textMut),
+                              prefixIcon: Icon(Icons.search_rounded, color: textMut, size: 18),
+                              filled: true,
+                              fillColor: bgMuted,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.3)),
+                              ),
+                            ),
+                            onChanged: _search,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
 
-        if (!_isLoading && _destinations.isEmpty) Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(children: [const Text('🔍', style: TextStyle(fontSize: 32)), const SizedBox(height: 8), Text('No destinations found', style: ZussGoTheme.labelBold)]))),
+                    Text(
+                      _searchC.text.isEmpty ? 'All Destinations' : 'Search Results',
+                      style: context.textTheme.displaySmall!.copyWith(color: textPri),
+                    ),
+                    const SizedBox(height: 12),
 
-        if (!_isLoading && _destinations.isNotEmpty)
-          GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.82),
-              itemCount: _destinations.length,
-              itemBuilder: (_, i) {
-                final d = _destinations[i];
-                return GestureDetector(onTap: () => context.push('/destination/${d['slug']}'),
-                  child: Container(decoration: BoxDecoration(gradient: _dg(i), borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 3))]),
-                    child: Stack(children: [
-                      Center(child: Opacity(opacity: 0.1, child: Text(d['emoji'] ?? '🌍', style: const TextStyle(fontSize: 50)))),
-                      Positioned(top: 8, right: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(6)),
-                          child: Text('⭐ 4.${8 - (i % 3)}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)))),
-                      Positioned(bottom: 0, left: 0, right: 0, child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)]),
-                            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(22), bottomRight: Radius.circular(22))),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(d['emoji'] ?? '🌍', style: const TextStyle(fontSize: 22)),
-                          Text(d['name'] ?? '', style: const TextStyle(fontFamily: 'Playfair Display', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-                          if (d['state'] != null) Text(d['state'], style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
-                          const SizedBox(height: 4),
-                          Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 4, height: 4, decoration: const BoxDecoration(color: ZussGoTheme.mint, shape: BoxShape.circle)), const SizedBox(width: 3),
-                                Text('${d['travelerCount'] ?? 0} going', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.9)))])),
-                        ]),
-                      )),
-                    ]),
-                  ),
-                );
-              }),
-      ])))),
-      const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 1)),
-    ]));
+                    if (_isLoading)
+                      Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green)),
+                      ),
+
+                    if (!_isLoading && _destinations.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Column(children: [
+                            Icon(Icons.search_rounded, size: 44, color: context.colors.green.withValues(alpha: 0.4)),
+                            const SizedBox(height: 8),
+                            Text('No destinations found', style: context.textTheme.labelLarge!.copyWith(color: textPri)),
+                          ]),
+                        ),
+                      ),
+
+                    if (!_isLoading && _destinations.isNotEmpty)
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.82,
+                        ),
+                        itemCount: _destinations.length,
+                        itemBuilder: (_, i) {
+                          final d = _destinations[i];
+                          final imageUrl = DestinationImages.getImageFromData(d);
+                          return GestureDetector(
+                            onTap: () => context.push('/destination/${d['slug']}'),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (imageUrl != null)
+                                      Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, progress) {
+                                          if (progress == null) return child;
+                                          return Container(color: bgCard, child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 1.5, color: context.colors.green.withValues(alpha: 0.4)))));
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
+                                            child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
+                                          );
+                                        },
+                                      )
+                                    else
+                                      Container(
+                                        decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
+                                        child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
+                                      ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                                          stops: const [0.4, 1.0],
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0, left: 0, right: 0,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(d['name'] ?? '', style: const TextStyle(fontFamily: 'Playfair Display', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                                            if (d['state'] != null)
+                                              Text(d['state'], style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(width: 4, height: 4, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle)),
+                                                  const SizedBox(width: 3),
+                                                  Text('${d['travelerCount'] ?? 0} going', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.9))),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 1)),
+        ],
+      ),
+    );
   }
 }

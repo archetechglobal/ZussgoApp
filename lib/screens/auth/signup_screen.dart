@@ -77,39 +77,39 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-        decoration: const BoxDecoration(
-          color: ZussGoTheme.bgPrimary,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: ZussGoTheme.scaffoldBg(context),
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
         ),
         child: Column(
           children: [
             // Handle
             Padding(
               padding: const EdgeInsets.only(top: 12, bottom: 8),
-              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: ZussGoTheme.borderDefault, borderRadius: BorderRadius.circular(2))),
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: ZussGoTheme.border(context), borderRadius: BorderRadius.circular(2))),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title, style: ZussGoTheme.displaySmall),
+                  Text(title, style: context.textTheme.displaySmall!.adaptive(context)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       width: 30, height: 30,
-                      decoration: BoxDecoration(color: ZussGoTheme.bgMuted, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, size: 16, color: ZussGoTheme.textMuted),
+                      decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), shape: BoxShape.circle),
+                      child: Icon(Icons.close_rounded, size: 16, color: ZussGoTheme.mutedText(context)),
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(color: ZussGoTheme.borderDefault),
+            Divider(color: ZussGoTheme.border(context)),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-                child: Text(content, style: ZussGoTheme.bodyMedium.copyWith(height: 1.7, color: ZussGoTheme.textSecondary)),
+                child: Text(content, style: context.textTheme.bodyMedium!.copyWith(height: 1.7, color: ZussGoTheme.secondaryText(context))),
               ),
             ),
           ],
@@ -120,65 +120,76 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ZussGoTheme.bgPrimary,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () => context.pop(),
-                child: Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(color: ZussGoTheme.bgMuted, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary, size: 20),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/login');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: ZussGoTheme.scaffoldBg(context),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => context.canPop() ? context.pop() : context.go('/login'),
+                  child: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context), size: 20),
+                  ),
                 ),
-              ),
               const SizedBox(height: 20),
-              Text('Create\nAccount', style: ZussGoTheme.displayLarge),
+              Text('Create\nAccount', style: context.textTheme.displayLarge!.adaptive(context)),
               const SizedBox(height: 8),
-              Text('Join travelers finding their tribe', style: ZussGoTheme.bodyLarge),
+              Text('Join travelers finding their tribe', style: context.textTheme.bodyLarge!.adaptive(context)),
               const SizedBox(height: 28),
 
-              Text('Full Name', style: ZussGoTheme.labelBold.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13)),
+              Text('Full Name', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameC,
-                decoration: ZussGoTheme.inputDecoration(hint: 'Arjun Sharma', prefix: Icon(Icons.person_outline_rounded, color: ZussGoTheme.textMuted, size: 20)),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+                decoration: ZussGoTheme.inputDecorationOf(context, hint: 'Arjun Sharma', prefix: Icon(Icons.person_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20)),
+                style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
 
-              Text('Email', style: ZussGoTheme.labelBold.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13)),
+              Text('Email', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailC,
-                decoration: ZussGoTheme.inputDecoration(hint: 'arjun@email.com', prefix: Icon(Icons.mail_outline_rounded, color: ZussGoTheme.textMuted, size: 20)),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+                decoration: ZussGoTheme.inputDecorationOf(context, hint: 'arjun@email.com', prefix: Icon(Icons.mail_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20)),
+                style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
 
-              Text('Password', style: ZussGoTheme.labelBold.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13)),
+              Text('Password', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
               const SizedBox(height: 8),
               TextField(
                 controller: _passC,
-                decoration: ZussGoTheme.inputDecoration(
+                decoration: ZussGoTheme.inputDecorationOf(context, 
                   hint: '••••••••',
-                  prefix: Icon(Icons.lock_outline_rounded, color: ZussGoTheme.textMuted, size: 20),
+                  prefix: Icon(Icons.lock_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20),
                   suffix: GestureDetector(
                     onTap: () => setState(() => _obscure = !_obscure),
-                    child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: ZussGoTheme.textMuted, size: 20),
+                    child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: ZussGoTheme.mutedText(context), size: 20),
                   ),
                 ),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
+                style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
                 obscureText: _obscure,
               ),
               const SizedBox(height: 4),
-              Text('At least 8 characters', style: ZussGoTheme.bodySmall),
+              Text('At least 8 characters', style: context.textTheme.bodySmall!.adaptive(context)),
 
               const SizedBox(height: 20),
 
@@ -207,12 +218,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(top: 14),
-                  decoration: BoxDecoration(color: ZussGoTheme.rose.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: isDark ? 0.15 : 0.06), border: isDark ? Border.all(color: context.colors.rose.withValues(alpha: 0.3)) : null, borderRadius: BorderRadius.circular(12)),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline_rounded, color: ZussGoTheme.rose, size: 18),
+                      Icon(Icons.info_outline_rounded, color: context.colors.rose, size: 18),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(_error!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 12, fontWeight: FontWeight.w500))),
+                      Expanded(child: Text(_error!, style: TextStyle(color: isDark ? const Color(0xFFFFAEB4) : context.colors.rose, fontSize: 12, fontWeight: FontWeight.w500))),
                     ],
                   ),
                 ),
@@ -233,12 +244,12 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 28),
               Center(
                 child: GestureDetector(
-                  onTap: () => context.pop(),
+                  onTap: () => context.canPop() ? context.pop() : context.go('/login'),
                   child: RichText(
                     text: TextSpan(
                       text: 'Already have an account? ',
-                      style: ZussGoTheme.bodyMedium,
-                      children: [TextSpan(text: 'Sign In', style: TextStyle(color: ZussGoTheme.green, fontWeight: FontWeight.w700))],
+                      style: context.textTheme.bodyMedium!,
+                      children: [TextSpan(text: 'Sign In', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w700))],
                     ),
                   ),
                 ),
@@ -247,7 +258,7 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   // ── Placeholder policy texts (replace with your real content) ──
@@ -417,10 +428,10 @@ class _PolicyCheckbox extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             width: 22, height: 22,
             decoration: BoxDecoration(
-              color: checked ? ZussGoTheme.green : Colors.transparent,
+              color: checked ? context.colors.green : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
-              border: checked ? null : Border.all(color: ZussGoTheme.borderDefault, width: 1.5),
-              boxShadow: checked ? [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.2), blurRadius: 6)] : null,
+              border: checked ? null : Border.all(color: ZussGoTheme.border(context), width: 1.5),
+              boxShadow: checked ? [BoxShadow(color: context.colors.green.withValues(alpha: 0.2), blurRadius: 6)] : null,
             ),
             child: checked
                 ? const Icon(Icons.check_rounded, size: 15, color: Colors.white)
@@ -432,16 +443,16 @@ class _PolicyCheckbox extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 text: label,
-                style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.textSecondary, fontSize: 13),
+                style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13),
                 children: [
                   TextSpan(
                     text: linkText,
                     style: TextStyle(
-                      color: ZussGoTheme.green,
+                      color: context.colors.green,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                       decoration: TextDecoration.underline,
-                      decorationColor: ZussGoTheme.green.withValues(alpha: 0.3),
+                      decorationColor: context.colors.green.withValues(alpha: 0.3),
                     ),
                     recognizer: TapGestureRecognizer()..onTap = onLinkTap,
                   ),

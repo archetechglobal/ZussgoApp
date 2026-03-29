@@ -8,13 +8,20 @@ class ZussGoBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      margin: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+      margin: EdgeInsets.fromLTRB(18, 0, 18, 16 + bottomInset),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ZussGoTheme.cardBg(context),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 4))],
+        border: Theme.of(context).brightness == Brightness.dark
+            ? Border.all(color: ZussGoTheme.border(context), width: 1)
+            : null,
+        boxShadow: [
+          if (Theme.of(context).brightness == Brightness.light)
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 4))
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -30,6 +37,7 @@ class ZussGoBottomNav extends StatelessWidget {
   }
 }
 
+// _NavIcon stays exactly the same — no changes needed
 class _NavIcon extends StatelessWidget {
   final IconData icon;
   final int index;
@@ -46,9 +54,9 @@ class _NavIcon extends StatelessWidget {
       child: Container(
         width: 44, height: 44,
         decoration: isActive
-            ? BoxDecoration(color: ZussGoTheme.green, shape: BoxShape.circle, boxShadow: [BoxShadow(color: ZussGoTheme.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3))])
+            ? BoxDecoration(color: context.colors.green, shape: BoxShape.circle, boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3))])
             : null,
-        child: Icon(icon, size: 22, color: isActive ? Colors.white : ZussGoTheme.textMuted),
+        child: Icon(icon, size: 22, color: isActive ? Colors.white : ZussGoTheme.mutedText(context)),
       ),
     );
   }
