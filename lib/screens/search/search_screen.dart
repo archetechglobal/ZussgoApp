@@ -3,194 +3,237 @@ import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
+import '../../services/destination_images.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
-
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final _searchController = TextEditingController();
+  final _searchC = TextEditingController();
   List<Map<String, dynamic>> _destinations = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDestinations();
+    _load();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _searchC.dispose();
     super.dispose();
   }
 
-  Future<void> _loadDestinations() async {
-    final result = await ApiService.getDestinations();
+  Future<void> _load() async {
+    final r = await ApiService.getDestinations();
     if (mounted) {
       setState(() {
         _isLoading = false;
-        if (result["success"] == true && result["data"] != null) {
-          _destinations = List<Map<String, dynamic>>.from(result["data"]);
+        if (r['success'] == true && r['data'] != null) {
+          _destinations = List<Map<String, dynamic>>.from(r['data']);
+          _destinations.sort((a, b) {
+            final hasA = DestinationImages.getImageFromData(a) != null;
+            final hasB = DestinationImages.getImageFromData(b) != null;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          });
         }
       });
     }
   }
 
-  Future<void> _search(String query) async {
-    if (query.length < 2) {
-      _loadDestinations();
-      return;
-    }
-
+  Future<void> _search(String q) async {
+    if (q.length < 2) { _load(); return; }
     setState(() => _isLoading = true);
-    final result = await ApiService.searchDestinations(query);
+    final r = await ApiService.searchDestinations(q);
     if (mounted) {
       setState(() {
         _isLoading = false;
-        if (result["success"] == true && result["data"] != null) {
-          _destinations = List<Map<String, dynamic>>.from(result["data"]);
+        if (r['success'] == true && r['data'] != null) {
+          _destinations = List<Map<String, dynamic>>.from(r['data']);
+          _destinations.sort((a, b) {
+            final hasA = DestinationImages.getImageFromData(a) != null;
+            final hasB = DestinationImages.getImageFromData(b) != null;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          });
         }
       });
     }
-  }
-
-  // Gradient for each destination card
-  LinearGradient _cardGradient(int index) {
-    final gradients = [
-      const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFF43F5E)]),
-      const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFFA78BFA)]),
-      const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF38BDF8)]),
-      const LinearGradient(colors: [Color(0xFFF43F5E), Color(0xFFA78BFA)]),
-      const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFF22C55E)]),
-    ];
-    return gradients[index % gradients.length];
   }
 
   @override
   Widget build(BuildContext context) {
+    final bgPage  = ZussGoTheme.scaffoldBg(context);
+    final bgMuted = ZussGoTheme.mutedBg(context);
+    final bgCard  = ZussGoTheme.cardBg(context);
+    final textPri = ZussGoTheme.primaryText(context);
+    final textMut = ZussGoTheme.mutedText(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: bgPage,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SafeArea(
             bottom: false,
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 90),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Search bar
+                    // ── Search Bar ──
                     Row(
                       children: [
                         GestureDetector(
                           onTap: () => context.go('/home'),
-                          child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary),
+                          child: Container(
+                            width: 38, height: 38,
+                            decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(12)),
+                            child: Icon(Icons.arrow_back_rounded, color: textMut, size: 18),
+                          ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
-                            controller: _searchController,
+                            controller: _searchC,
+                            style: context.textTheme.bodyMedium!.copyWith(color: textPri),
                             decoration: InputDecoration(
                               hintText: 'Search destinations...',
-                              prefixIcon: Icon(Icons.search, color: ZussGoTheme.textMuted.withValues(alpha: 0.5), size: 20),
+                              hintStyle: context.textTheme.bodyMedium!.copyWith(color: textMut),
+                              prefixIcon: Icon(Icons.search_rounded, color: textMut, size: 18),
+                              filled: true,
+                              fillColor: bgMuted,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: ZussGoTheme.amber.withValues(alpha: 0.3)),
+                                borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.3)),
                               ),
                             ),
-                            style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
                             onChanged: _search,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
 
                     Text(
-                      _searchController.text.isEmpty ? 'All Destinations' : 'Search Results',
-                      style: ZussGoTheme.displaySmall,
+                      _searchC.text.isEmpty ? 'All Destinations' : 'Search Results',
+                      style: context.textTheme.displaySmall!.copyWith(color: textPri),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
-                    // Loading
                     if (_isLoading)
                       Padding(
                         padding: const EdgeInsets.all(40),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: ZussGoTheme.amber.withValues(alpha: 0.5))),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green)),
                       ),
 
-                    // Empty
                     if (!_isLoading && _destinations.isEmpty)
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.all(40),
                           child: Column(children: [
-                            const Text('🔍', style: TextStyle(fontSize: 36)),
-                            const SizedBox(height: 12),
-                            Text('No destinations found', style: ZussGoTheme.labelBold),
+                            Icon(Icons.search_rounded, size: 44, color: context.colors.green.withValues(alpha: 0.4)),
+                            const SizedBox(height: 8),
+                            Text('No destinations found', style: context.textTheme.labelLarge!.copyWith(color: textPri)),
                           ]),
                         ),
                       ),
 
-                    // Grid
                     if (!_isLoading && _destinations.isNotEmpty)
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.85,
+                          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.82,
                         ),
                         itemCount: _destinations.length,
-                        itemBuilder: (context, i) {
+                        itemBuilder: (_, i) {
                           final d = _destinations[i];
+                          final imageUrl = DestinationImages.getImageFromData(d);
                           return GestureDetector(
                             onTap: () => context.push('/destination/${d['slug']}'),
                             child: Container(
                               decoration: BoxDecoration(
-                                gradient: _cardGradient(i),
                                 borderRadius: BorderRadius.circular(20),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1), blurRadius: 10, offset: const Offset(0, 4))],
                               ),
-                              child: Stack(children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                                      colors: [Colors.transparent, Color(0x99000000)], stops: [0.3, 1.0],
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(d['emoji'] ?? '🌍', style: const TextStyle(fontSize: 30)),
-                                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(d['name'] ?? '', style: ZussGoTheme.labelBold.copyWith(fontSize: 16)),
-                                        if (d['state'] != null)
-                                          Text(d['state'], style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
-                                        const SizedBox(height: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
-                                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                            Container(width: 5, height: 5, decoration: const BoxDecoration(color: ZussGoTheme.mint, shape: BoxShape.circle)),
-                                            const SizedBox(width: 4),
-                                            Text('${d['travelerCount'] ?? 0} going', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.8))),
-                                          ]),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (imageUrl != null)
+                                      Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, progress) {
+                                          if (progress == null) return child;
+                                          return Container(color: bgCard, child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 1.5, color: context.colors.green.withValues(alpha: 0.4)))));
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
+                                            child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
+                                          );
+                                        },
+                                      )
+                                    else
+                                      Container(
+                                        decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
+                                        child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
+                                      ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                                          stops: const [0.4, 1.0],
                                         ),
-                                      ]),
-                                    ],
-                                  ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0, left: 0, right: 0,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(d['name'] ?? '', style: const TextStyle(fontFamily: 'Playfair Display', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                                            if (d['state'] != null)
+                                              Text(d['state'], style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(width: 4, height: 4, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle)),
+                                                  const SizedBox(width: 3),
+                                                  Text('${d['travelerCount'] ?? 0} going', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.9))),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ]),
+                              ),
                             ),
                           );
                         },
@@ -200,7 +243,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ),
-
           const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 1)),
         ],
       ),

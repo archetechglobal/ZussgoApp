@@ -12,114 +12,161 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _controller = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final _pages = const [
-    _OnboardPage(emoji: '🗺️', title: 'Your Journey\nStarts Here', desc: 'Find kindred travelers heading your way. No more solo anxiety.'),
-    _OnboardPage(emoji: '✨', title: 'Curated\nConnections', desc: 'We match you by destination, dates, and travel vibe. Not random — intentional.'),
-    _OnboardPage(emoji: '🌅', title: 'Stories Worth\nTelling', desc: 'The best trips start with the right people. Let\'s find yours.'),
+  final _pages = [
+    _OnboardingPage(
+      gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF22D3EE)]),
+      icon: Icons.luggage_rounded,
+      title: 'Post Where\nYou\'re Going',
+      subtitle: 'Share your destination & dates. Let other travelers find you and connect.',
+    ),
+    _OnboardingPage(
+      gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFBBF24)]),
+      icon: Icons.people_alt_rounded,
+      title: 'Find Your\nPerfect Match',
+      subtitle: 'Filter by age, mindset, travel style & budget. See compatibility scores.',
+    ),
+    _OnboardingPage(
+      gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
+      icon: Icons.chat_bubble_rounded,
+      title: 'Solo or Group\n— You Choose',
+      subtitle: 'Match 1-on-1 or join group trips with 3+ travelers. Chat, plan & go together.',
+    ),
   ];
 
-  // Mark onboarding as seen and navigate
-  void _finish() async {
-    await AuthService.markOnboardingSeen();
-    if (mounted) context.go('/signup');
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
-  void _skip() async {
+  void _next() {
+    if (_currentPage < 2) {
+      _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    } else {
+      _getStarted();
+    }
+  }
+
+  void _getStarted() async {
     await AuthService.markOnboardingSeen();
-    if (mounted) context.go('/signup');
+    if (mounted) context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: ZussGoTheme.scaffoldBg(context),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: _skip,
-                  child: Text('Skip', style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textMuted)),
-                ),
-              ),
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: _pages.length,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemBuilder: (context, i) => _pages[i],
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) {
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: i == _currentPage ? 28 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      gradient: i == _currentPage ? ZussGoTheme.gradientPrimary : null,
-                      color: i == _currentPage ? null : const Color(0x0FFFFFFF),
-                      borderRadius: BorderRadius.circular(4),
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: 3,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemBuilder: (context, i) {
+                  final page = _pages[i];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        // Image area
+                        Expanded(
+                          flex: 5,
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: page.gradient,
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                            child: Stack(
+                              children: [
+                                Center(child: Opacity(opacity: 0.12, child: Icon(page.icon, size: 120, color: Colors.white))),
+                                Positioned(
+                                  bottom: 20, left: 20,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                                    child: Icon(page.icon, size: 24, color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Content
+                        Expanded(
+                          flex: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                            child: Column(
+                              children: [
+                                // Dots
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(3, (j) {
+                                    final isActive = j == _currentPage;
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 300),
+                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                      width: isActive ? 24 : 8,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: isActive ? context.colors.green : ZussGoTheme.borderDefault,
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(page.title, style: context.textTheme.displayLarge!.copyWith(fontSize: 28), textAlign: TextAlign.center),
+                                const SizedBox(height: 10),
+                                Text(page.subtitle, style: context.textTheme.bodyMedium!, textAlign: TextAlign.center),
+                                const Spacer(),
+                                GradientButton(
+                                  text: _currentPage == 2 ? 'Get Started' : 'Next →',
+                                  onPressed: _next,
+                                ),
+                                if (_currentPage == 2) ...[
+                                  const SizedBox(height: 14),
+                                  GestureDetector(
+                                    onTap: () => context.go('/login'),
+                                    child: RichText(
+                                      text: TextSpan(
+                                        text: 'Already have an account? ',
+                                        style: context.textTheme.bodySmall!.adaptive(context),
+                                        children: [TextSpan(text: 'Sign In', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w600))],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
-                }),
-              ),
-              const SizedBox(height: 32),
-              GradientButton(
-                text: _currentPage == 2 ? 'Get Started' : 'Continue',
-                onPressed: () {
-                  if (_currentPage == 2) {
-                    _finish();
-                  } else {
-                    _controller.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
-                  }
                 },
               ),
-              const SizedBox(height: 16),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _OnboardPage extends StatelessWidget {
-  final String emoji;
+class _OnboardingPage {
+  final LinearGradient gradient;
+  final IconData icon;
   final String title;
-  final String desc;
-  const _OnboardPage({required this.emoji, required this.title, required this.desc});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: double.infinity, height: 240,
-          margin: const EdgeInsets.only(bottom: 36),
-          decoration: BoxDecoration(color: ZussGoTheme.bgSecondary, borderRadius: BorderRadius.circular(28), border: Border.all(color: ZussGoTheme.borderDefault)),
-          child: Stack(children: [
-            Positioned(top: -30, right: -30, child: _orb(120, ZussGoTheme.amber, 0.1)),
-            Positioned(bottom: -20, left: -20, child: _orb(100, ZussGoTheme.rose, 0.08)),
-            Center(child: Text(emoji, style: const TextStyle(fontSize: 72))),
-          ]),
-        ),
-        Text(title, textAlign: TextAlign.center, style: ZussGoTheme.displayLarge.copyWith(fontSize: 28, height: 1.15)),
-        const SizedBox(height: 12),
-        Text(desc, textAlign: TextAlign.center, style: ZussGoTheme.bodyLarge.copyWith(fontSize: 15, fontWeight: FontWeight.w300)),
-      ],
-    );
-  }
-
-  static Widget _orb(double size, Color color, double opacity) {
-    return Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0.0)])));
-  }
+  final String subtitle;
+  const _OnboardingPage({required this.gradient, required this.icon, required this.title, required this.subtitle});
 }

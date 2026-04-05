@@ -12,6 +12,17 @@
 .swiftpm/
 migrate_working_dir/
 
+# Utility Scripts and Logs
+*.py
+*.js
+*.ps1
+*.sh
+*.bat
+*.txt
+!README.md
+hs_err_*.log
+replay_*.log
+
 # IntelliJ related
 *.iml
 *.ipr

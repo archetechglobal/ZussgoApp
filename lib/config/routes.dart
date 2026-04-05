@@ -8,8 +8,11 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/auth/profile_setup_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/home/see_all_travelers_screen.dart';
+import '../screens/home/see_all_events_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/search/destination_detail_screen.dart';
+import '../screens/search/browse_travelers_screen.dart';
 import '../screens/matches/matches_screen.dart';
 import '../screens/matches/traveler_profile_screen.dart';
 import '../screens/chat/chat_list_screen.dart';
@@ -42,15 +45,14 @@ final GoRouter router = GoRouter(
       },
     ),
     GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
-    GoRoute(
-      path: '/reset-password',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? {};
-        return ResetPasswordScreen(email: extra['email'] ?? '');
-      },
-    ),
+    GoRoute(path: '/reset-password', builder: (context, state) {
+      final e = state.extra as Map<String, dynamic>? ?? {};
+      return ResetPasswordScreen(email: e['email'] ?? '');
+    }),
     GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(path: '/see-all-travelers', builder: (context, state) => const SeeAllTravelersScreen()),
+    GoRoute(path: '/see-all-events', builder: (context, state) => const SeeAllEventsScreen()),
     GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
     GoRoute(
       path: '/destination/:id',

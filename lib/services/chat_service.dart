@@ -26,6 +26,7 @@ class ChatService {
     try {
       final wsUrl = ApiConfig.baseUrl.replaceFirst('http', 'ws');
       _socket = await WebSocket.connect('$wsUrl/ws/chat?userId=$userId');
+      _socket!.pingInterval = const Duration(seconds: 15);
       _isConnected = true;
 
       _socket!.listen(
@@ -94,7 +95,7 @@ class ChatService {
 
   // Disconnect
   static void disconnect() {
-    _socket?.close();
+    _socket?.close(WebSocketStatus.normalClosure, 'Client disconnecting normally');
     _socket = null;
     _isConnected = false;
     _userId = null;

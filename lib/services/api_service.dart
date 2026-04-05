@@ -21,9 +21,10 @@ class ApiService {
     } catch (e) { return _error(); }
   }
 
-  static Future<Map<String, dynamic>> getDestinationBySlug(String slug) async {
+  static Future<Map<String, dynamic>> getDestinationBySlug(String slug, {String? userId}) async {
     try {
-      final response = await http.get(Uri.parse(ApiConfig.destinationBySlug(slug)), headers: _headers());
+      final query = userId != null ? "?userId=$userId" : "";
+      final response = await http.get(Uri.parse("${ApiConfig.destinationBySlug(slug)}$query"), headers: _headers());
       return _parse(response);
     } catch (e) { return _error(); }
   }
@@ -269,6 +270,39 @@ class ApiService {
     };
   }
 
+  static Future<Map<String, dynamic>> getUserProfile(String travelerId, {String? currentUserId}) async {
+    try {
+      final query = currentUserId != null ? "?userId=$currentUserId" : "";
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/auth/users/$travelerId$query"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> submitRating({
+    required String raterId,
+    required String rateeId,
+    required String tripId,
+    required int score,
+    String? review,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/ratings"),
+        headers: _headers(),
+        body: jsonEncode({
+          "raterId": raterId,
+          "rateeId": rateeId,
+          "tripId": tripId,
+          "score": score,
+          if (review != null && review.isNotEmpty) "review": review,
+        }),
+      );
+      return _parse(response);
+    } catch (e) {
+      return _error();
+    }
+  }
+
   static Map<String, dynamic> _error() {
     return {
       "success": false,
@@ -277,4 +311,111 @@ class ApiService {
       "statusCode": 0,
     };
   }
+
+  // ─── EVENTS ───
+
+  static Future<Map<String, dynamic>> getEvents() async {
+    try {
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/events"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> getEventsForDestination(String slug) async {
+    try {
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/events?destination=$slug"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  // ─── GROUPS ───
+
+  static Future<Map<String, dynamic>> getGroups(String destinationId) async {
+    try {
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/groups?destinationId=$destinationId"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> getMyGroups(String userId) async {
+    try {
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/groups/my?userId=$userId"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> createGroup(Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/groups"), headers: _headers(), body: jsonEncode(data));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> joinGroup(String groupId, String userId) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/groups/$groupId/join"), headers: _headers(), body: jsonEncode({'userId': userId}));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  // ─── SAFETY ───
+
+  static Future<Map<String, dynamic>> startActiveTrip(Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/safety/start"), headers: _headers(), body: jsonEncode(data));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> completeActiveTrip(String tripId, String userId) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/safety/$tripId/complete"), headers: _headers(), body: jsonEncode({'userId': userId}));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> triggerSOS(String tripId) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/safety/$tripId/sos"), headers: _headers(), body: jsonEncode({}));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> getEmergencyContacts(String userId) async {
+    try {
+      final response = await http.get(Uri.parse("${ApiConfig.baseUrl}/safety/contacts?userId=$userId"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> addEmergencyContact(Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(Uri.parse("${ApiConfig.baseUrl}/safety/contacts"), headers: _headers(), body: jsonEncode(data));
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+  static Future<Map<String, dynamic>> deleteEmergencyContact(String contactId) async {
+    try {
+      final response = await http.delete(Uri.parse("${ApiConfig.baseUrl}/safety/contacts/$contactId"), headers: _headers());
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
+
+  static Future<Map<String, dynamic>> getSmartMatches({
+    required String tripId,
+    required String userId,
+    bool preferSameGender = false,
+    int minScore = 30,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/matching/$tripId?userId=$userId&preferSameGender=$preferSameGender&minScore=$minScore"),
+        headers: _headers(),
+      );
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
 }

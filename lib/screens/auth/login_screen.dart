@@ -6,190 +6,133 @@ import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  bool _rememberMe = true;
-  String? _errorMessage;
+  final _emailC = TextEditingController();
+  final _passC = TextEditingController();
+  bool _loading = false, _rememberMe = true, _obscure = true;
+  String? _error;
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  void dispose() { _emailC.dispose(); _passC.dispose(); super.dispose(); }
 
-  Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+  Future<void> _login() async {
+    if (_emailC.text.trim().isEmpty || _passC.text.isEmpty) { setState(() => _error = "Please fill in all fields"); return; }
+    setState(() { _error = null; _loading = true; });
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = "Please fill in all fields");
-      return;
-    }
+    final r = await AuthService.login(email: _emailC.text.trim(), password: _passC.text);
+    setState(() => _loading = false);
 
-    setState(() { _errorMessage = null; _isLoading = true; });
-
-    final result = await AuthService.login(email: email, password: password);
-
-    setState(() => _isLoading = false);
-
-    if (result["success"] == true) {
-      final data = result["data"];
-
-      // Save session if "remember me" is checked
-      if (_rememberMe && data != null) {
-        await AuthService.saveSession(
-          accessToken: data["accessToken"] ?? "",
-          refreshToken: data["refreshToken"] ?? "",
-          user: data["user"] ?? {},
-        );
-      }
-
-      // Smart routing based on profile completion
-      final isProfileCompleted = data?["user"]?["isProfileCompleted"] ?? false;
-
-      if (mounted) {
-        if (isProfileCompleted) {
-          context.go('/home');
-        } else {
-          context.go('/profile-setup');
-        }
+    if (r["success"] == true) {
+      final d = r["data"];
+      if (d != null && d["accessToken"] != null) {
+        await AuthService.saveSession(accessToken: d["accessToken"], refreshToken: d["refreshToken"] ?? "", user: d["user"] ?? {});
+        final u = d["user"];
+        if (u != null && u["isProfileCompleted"] == true) { if (mounted) context.go('/home'); }
+        else { if (mounted) context.go('/profile-setup'); }
       }
     } else {
-      // Check if email is not verified
-      if (result["code"] == "EMAIL_NOT_VERIFIED") {
-        // Send them to OTP screen to verify
-        if (mounted) {
-          context.push('/verify-otp', extra: {
-            'email': _emailController.text.trim(),
-            'type': 'signup',
-          });
-        }
-      } else {
-        setState(() => _errorMessage = result["message"]);
-      }
+      if (r["code"] == "EMAIL_NOT_VERIFIED") { if (mounted) context.push('/verify-otp', extra: {'email': _emailC.text.trim(), 'type': 'signup'}); }
+      else { setState(() => _error = r["message"]); }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: ZussGoTheme.scaffoldBg(context),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('WELCOME BACK', style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.amber, fontWeight: FontWeight.w600, letterSpacing: 2)),
-              const SizedBox(height: 8),
-              Text('Sign In', style: ZussGoTheme.displayLarge.copyWith(fontSize: 28)),
-              const SizedBox(height: 4),
-              Text('Your next adventure awaits', style: ZussGoTheme.bodySmall),
-              const SizedBox(height: 28),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SizedBox(height: 36),
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(16)),
+              alignment: Alignment.center,
+              child: const Text('Z', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 22, fontFamily: 'Playfair Display')),
+            ),
+            const SizedBox(height: 24),
+            Text('Welcome\nBack', style: context.textTheme.displayLarge!.adaptive(context)),
+            const SizedBox(height: 8),
+            Text('Sign in to continue your journey', style: context.textTheme.bodyLarge!.adaptive(context)),
+            const SizedBox(height: 32),
 
-              // Email
-              Text('Email', style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w600, color: ZussGoTheme.textSecondary)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(hintText: 'arjun@email.com'),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
+            Text('Email', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailC,
+              decoration: ZussGoTheme.inputDecorationOf(context, hint: 'arjun@email.com', prefix: Icon(Icons.mail_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20)),
+              style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 18),
 
-              // Password
-              Text('Password', style: ZussGoTheme.bodySmall.copyWith(fontWeight: FontWeight.w600, color: ZussGoTheme.textSecondary)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(hintText: '••••••••'),
-                style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textPrimary),
-                obscureText: true,
-                onSubmitted: (_) => _handleLogin(),
-              ),
-              const SizedBox(height: 12),
-
-              // Remember me + Forgot password row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Remember me checkbox
-                  GestureDetector(
-                    onTap: () => setState(() => _rememberMe = !_rememberMe),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 20, height: 20,
-                          decoration: BoxDecoration(
-                            color: _rememberMe ? ZussGoTheme.amber : Colors.transparent,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: _rememberMe ? ZussGoTheme.amber : ZussGoTheme.textMuted,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: _rememberMe
-                              ? const Icon(Icons.check, size: 14, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Remember me',
-                          style: ZussGoTheme.bodySmall.copyWith(color: ZussGoTheme.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Forgot password
-                  GestureDetector(
-                    onTap: () => context.push('/forgot-password'),
-                    child: Text(
-                      'Forgot password?',
-                      style: TextStyle(fontSize: 13, color: ZussGoTheme.lavender, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Error message
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_errorMessage!, style: TextStyle(color: ZussGoTheme.rose, fontSize: 13)),
-                ),
-
-              const SizedBox(height: 16),
-
-              GradientButton(text: 'Sign In', isLoading: _isLoading, onPressed: _handleLogin),
-              const SizedBox(height: 32),
-
-              // Signup link
-              Center(
-                child: GestureDetector(
-                  onTap: () => context.go('/signup'),
-                  child: RichText(
-                    text: TextSpan(
-                      text: "New here? ",
-                      style: ZussGoTheme.bodyMedium.copyWith(color: ZussGoTheme.textMuted),
-                      children: [
-                        TextSpan(text: 'Create account', style: TextStyle(color: ZussGoTheme.amber, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
+            Text('Password', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 13)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _passC,
+              decoration: ZussGoTheme.inputDecorationOf(context, 
+                hint: '••••••••',
+                prefix: Icon(Icons.lock_outline_rounded, color: ZussGoTheme.mutedText(context), size: 20),
+                suffix: GestureDetector(
+                  onTap: () => setState(() => _obscure = !_obscure),
+                  child: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: ZussGoTheme.mutedText(context), size: 20),
                 ),
               ),
-            ],
-          ),
+              style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)),
+              obscureText: _obscure,
+              onSubmitted: (_) => _login(),
+            ),
+            const SizedBox(height: 14),
+
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              GestureDetector(
+                onTap: () => setState(() => _rememberMe = !_rememberMe),
+                child: Row(children: [
+                  Container(
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      color: _rememberMe ? context.colors.green : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: _rememberMe ? null : Border.all(color: ZussGoTheme.border(context), width: 1.5),
+                    ),
+                    child: _rememberMe ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Remember me', style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.secondaryText(context))),
+                ]),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/forgot-password'),
+                child: Text('Forgot Password?', style: TextStyle(fontSize: 12, color: context.colors.green, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+
+            if (_error != null)
+              Container(
+                width: double.infinity, padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: isDark ? 0.15 : 0.06), border: isDark ? Border.all(color: context.colors.rose.withValues(alpha: 0.3)) : null, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Icon(Icons.info_outline_rounded, color: context.colors.rose, size: 18), SizedBox(width: 8),
+                  Expanded(child: Text(_error!, style: TextStyle(color: isDark ? const Color(0xFFFFAEB4) : context.colors.rose, fontSize: 12, fontWeight: FontWeight.w500))),
+                ]),
+              ),
+
+            const SizedBox(height: 28),
+            GradientButton(text: 'Sign In', isLoading: _loading, onPressed: _login),
+            const SizedBox(height: 28),
+            Center(
+              child: GestureDetector(
+                onTap: () => context.push('/signup'),
+                child: RichText(text: TextSpan(text: "Don't have an account? ", style: context.textTheme.bodyMedium!, children: [TextSpan(text: 'Sign Up', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w700))])),
+              ),
+            ),
+          ]),
         ),
       ),
     );

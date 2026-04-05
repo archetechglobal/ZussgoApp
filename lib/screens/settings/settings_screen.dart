@@ -1,30 +1,25 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/theme.dart';
+import '../../config/api.dart';
 import '../../widgets/bottom_nav.dart';
+import '../../widgets/gradient_button.dart';
 import '../../services/auth_service.dart';
+import '../../services/theme_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-<<<<<<< HEAD
-  String _userName = '';
-  String _userInitial = '';
-  String _userCity = '';
-
-  static const _items = [
-    {'icon': Icons.person_rounded, 'label': 'Edit Profile', 'sub': 'Photo, bio, vibes'},
-    {'icon': Icons.notifications_rounded, 'label': 'Notifications', 'sub': 'Match alerts'},
-    {'icon': Icons.shield_rounded, 'label': 'Safety', 'sub': 'Block, report'},
-    {'icon': Icons.auto_awesome_rounded, 'label': 'ZussGo Pro', 'sub': 'Unlock premium'},
-    {'icon': Icons.help_rounded, 'label': 'Support', 'sub': 'Help center'},
-    {'icon': Icons.description_rounded, 'label': 'Legal', 'sub': 'Terms & privacy'},
-=======
   String _userName    = '';
   String _userInitial = '';
   String _userCity    = '';
@@ -36,37 +31,156 @@ class _SettingsScreenState extends State<SettingsScreen> {
     {'icon': Icons.auto_awesome_rounded,  'label': 'ZussGo Pro',    'sub': 'Unlock premium',      'route': '/settings/pro'},
     {'icon': Icons.help_rounded,          'label': 'Support',       'sub': 'Help center',         'route': '/settings/support'},
     {'icon': Icons.description_rounded,   'label': 'Legal',         'sub': 'Terms & privacy',     'route': '/settings/legal'},
->>>>>>> 65df3af (Added the settings screen)
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _nameC = TextEditingController();
+    _bioC = TextEditingController();
+    _cityC = TextEditingController();
+    _ageC = TextEditingController();
+    _load();
   }
 
-  Future<void> _loadUser() async {
-    final user = await AuthService.getSavedUser();
-    if (user != null && mounted) {
+  @override
+  void dispose() {
+    _nameC.dispose();
+    _bioC.dispose();
+    _cityC.dispose();
+    _ageC.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final u = await AuthService.getSavedUser();
+    if (u != null && mounted) {
       setState(() {
-<<<<<<< HEAD
-        _userName = user['fullName'] ?? 'Traveler';
-        _userInitial = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'Z';
-        _userCity = user['city'] ?? '';
-=======
         _userName    = user['fullName'] ?? 'Traveler';
         _userInitial = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'Z';
         _userCity    = user['city'] ?? '';
->>>>>>> 65df3af (Added the settings screen)
       });
+      final userId = u['userId'];
+      if (userId != null) {
+        _loadStats(userId);
+        final prefs = await SharedPreferences.getInstance();
+        final path = prefs.getString('localProfileImage_$userId');
+        if (path != null && File(path).existsSync()) {
+          setState(() => _profileImagePath = path);
+        }
+      }
+    }
+  }
+
+  Future<void> _loadStats(String userId) async {
+    setState(() => _statsLoading = true);
+    try {
+      final tripsRes = await http.get(Uri.parse('${ApiConfig.trips}?userId=$userId'));
+      if (tripsRes.statusCode == 200) {
+        final tData = jsonDecode(tripsRes.body);
+        if (tData['success'] == true && tData['data'] != null) {
+          final d = tData['data'];
+          _tripCount = (d['upcoming'] as List).length + (d['past'] as List).length;
+        }
+      }
+      final matchesRes = await http.get(Uri.parse('${ApiConfig.matches}?userId=$userId'));
+      if (matchesRes.statusCode == 200) {
+        final mData = jsonDecode(matchesRes.body);
+        if (mData['success'] == true && mData['data'] != null) {
+          _matchCount = (mData['data'] as List).length;
+        }
+      }
+      final ratingsRes = await http.get(Uri.parse(ApiConfig.ratingsByUser(userId)));
+      if (ratingsRes.statusCode == 200) {
+        final rData = jsonDecode(ratingsRes.body);
+        if (rData['success'] == true && rData['data'] != null) {
+          final stats = rData['data']['stats'];
+          if (stats != null) {
+            _avgRating = (stats['average'] as num).toDouble();
+            _totalRatings = (stats['totalRatings'] as num).toInt();
+          }
+        }
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _statsLoading = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final userId = _user['userId'];
+    if (userId == null) {
+      setState(() => _saving = false);
+      return;
+    }
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.profileSetup),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'gender': _gender ?? 'Male',
+          'age': int.tryParse(_ageC.text) ?? 0,
+          'city': _cityC.text.trim(),
+          'travelStyle': _travelStyle,
+          'bio': _bioC.text.trim(),
+          'schedule': _schedule,
+          'socialEnergy': _social,
+          'planningStyle': _planning,
+          'energyLevel': _energy,
+          'values': _values.toList(),
+          'interests': _interests.toList(),
+          'travelPriority': _priority,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      setState(() => _saving = false);
+      if (data['success'] == true) {
+        final updated = data['data'];
+        if (updated != null) {
+          await AuthService.updateSavedUser({
+            'userId': updated['userId'],
+            'fullName': updated['fullName'] ?? _nameC.text,
+            'email': updated['email'] ?? _user['email'],
+            'gender': updated['gender'],
+            'age': updated['age'],
+            'city': updated['city'],
+            'bio': updated['bio'],
+            'travelStyle': updated['travelStyle'],
+            'isProfileCompleted': true,
+            'schedule': updated['schedule'],
+            'socialEnergy': updated['socialEnergy'],
+            'planningStyle': updated['planningStyle'],
+            'energyLevel': updated['energyLevel'],
+            'values': updated['values'],
+            'interests': updated['interests'],
+            'travelPriority': updated['travelPriority'],
+          });
+        }
+        await _load();
+        setState(() => _editing = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile updated! ✓'), backgroundColor: context.colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['message'] ?? 'Failed to save')),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _saving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not connect to server')),
+        );
+      }
     }
   }
 
   Future<void> _handleLogout() async {
-<<<<<<< HEAD
-    await AuthService.clearSession();
-    if (mounted) context.go('/login');
-=======
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -90,41 +204,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await AuthService.clearSession();
       if (mounted) context.go('/login');
     }
->>>>>>> 65df3af (Added the settings screen)
   }
+
+  Widget _chip(String label, bool sel, VoidCallback onTap) => GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: sel ? context.colors.green : ZussGoTheme.mutedBg(context),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+            color: sel ? Colors.white : ZussGoTheme.secondaryText(context),
+          ),
+        ),
+      ));
 
   @override
   Widget build(BuildContext context) {
+    if (_editing) return _buildEditProfile();
+
+    final themeService = context.watch<ThemeService>();
+    final isDark = themeService.isDark;
+
+    // ── Dark-aware colors ──
+    final bgPage = isDark ? const Color(0xFF0F0F0F) : ZussGoTheme.bgPrimary;
+    final bgCard = isDark ? const Color(0xFF1C1C1C) : ZussGoTheme.bgSecondary;
+    final bgMuted = isDark ? const Color(0xFF2A2A2A) : ZussGoTheme.bgMuted;
+    final borderColor = isDark ? const Color(0xFF2E2E2E) : ZussGoTheme.borderDefault;
+    final textPrimary = isDark ? Colors.white : ZussGoTheme.textPrimary;
+    final textSecondary = isDark ? const Color(0xFFAAAAAA) : ZussGoTheme.textSecondary;
+    final textMuted = isDark ? const Color(0xFF666666) : context.colors.textMuted;
+
     return Scaffold(
+      backgroundColor: bgPage,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SafeArea(
             bottom: false,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 90),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () => context.go('/home'),
-                    child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
+              padding: const EdgeInsets.fromLTRB(22, 8, 22, 90),
+              child: Column(children: [
+                const SizedBox(height: 12),
 
-<<<<<<< HEAD
-                  // Profile header (dynamic)
-=======
                   // Profile header
->>>>>>> 65df3af (Added the settings screen)
                   Row(
                     children: [
                       Container(
                         width: 56, height: 56,
-<<<<<<< HEAD
-                        decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(18)),
-                        alignment: Alignment.center,
-                        child: Text(_userInitial, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white, fontFamily: 'Playfair Display')),
-=======
                         decoration: BoxDecoration(
                           gradient: ZussGoTheme.gradientPrimary,
                           borderRadius: BorderRadius.circular(18),
@@ -137,21 +269,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: Colors.white, fontFamily: 'Playfair Display',
                           ),
                         ),
->>>>>>> 65df3af (Added the settings screen)
                       ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(_userName, style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
-<<<<<<< HEAD
-                          Text(_userCity.isNotEmpty ? '$_userCity · 0 trips' : '0 trips', style: ZussGoTheme.bodySmall),
-=======
                           Text(
                             _userCity.isNotEmpty ? '$_userCity · 0 trips' : '0 trips',
                             style: ZussGoTheme.bodySmall,
                           ),
->>>>>>> 65df3af (Added the settings screen)
                         ],
                       ),
                     ],
@@ -160,31 +287,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   // Settings items
                   ...List.generate(_items.length, (i) {
-<<<<<<< HEAD
-                    final item = _items[i];
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ZussGoTheme.borderDefault))),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 38, height: 38,
-                            decoration: BoxDecoration(color: ZussGoTheme.bgSecondary, borderRadius: BorderRadius.circular(12)),
-                            child: Icon(item['icon'] as IconData, size: 20, color: ZussGoTheme.textSecondary),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item['label'] as String, style: ZussGoTheme.labelBold.copyWith(fontSize: 14)),
-                                Text(item['sub'] as String, style: ZussGoTheme.bodySmall),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded, color: ZussGoTheme.textMuted, size: 20),
-                        ],
-=======
                     final item  = _items[i];
                     final isPro = item['label'] == 'ZussGo Pro';
                     return GestureDetector(
@@ -229,17 +331,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const Icon(Icons.chevron_right_rounded, color: ZussGoTheme.textMuted, size: 20),
                           ],
                         ),
->>>>>>> 65df3af (Added the settings screen)
                       ),
                     );
                   }),
                   const SizedBox(height: 20),
 
-<<<<<<< HEAD
-                  // Logout — clears session then navigates
-=======
                   // Sign Out
->>>>>>> 65df3af (Added the settings screen)
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -250,30 +347,153 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-<<<<<<< HEAD
-                      child: Text('Sign Out', style: TextStyle(color: ZussGoTheme.rose, fontWeight: FontWeight.w600, fontSize: 14)),
-=======
                       child: Text(
                         'Sign Out',
                         style: TextStyle(color: ZussGoTheme.rose, fontWeight: FontWeight.w600, fontSize: 14),
                       ),
->>>>>>> 65df3af (Added the settings screen)
                     ),
-                  ),
-                ],
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: context.colors.green, shape: BoxShape.circle, border: Border.all(color: ZussGoTheme.scaffoldBg(context), width: 3)),
+                        child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 24),
+            _editLabel('Full Name'),
+            TextField(controller: _nameC, decoration: ZussGoTheme.inputDecorationOf(context, hint: 'Your name'), style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context))),
+            const SizedBox(height: 12),
+            _editLabel('Bio'),
+            TextField(controller: _bioC, decoration: ZussGoTheme.inputDecorationOf(context, hint: 'About yourself'), style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)), maxLines: 3),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _editLabel('City'),
+                TextField(controller: _cityC, decoration: ZussGoTheme.inputDecorationOf(context, hint: 'Mumbai'), style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context))),
+              ])),
+              const SizedBox(width: 10),
+              SizedBox(width: 80, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _editLabel('Age'),
+                TextField(controller: _ageC, decoration: ZussGoTheme.inputDecorationOf(context, hint: '24'), style: context.textTheme.bodyMedium!.copyWith(color: ZussGoTheme.primaryText(context)), keyboardType: TextInputType.number),
+              ])),
+            ]),
+            const SizedBox(height: 12),
+            _editLabel('Gender'),
+            Row(children: ['Male', 'Female', 'Other'].map((g) {
+              final sel = _gender == g;
+              return Expanded(child: GestureDetector(
+                onTap: () => setState(() => _gender = g),
+                child: Container(
+                  margin: EdgeInsets.only(right: g != 'Other' ? 6 : 0),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: sel ? (Theme.of(context).brightness == Brightness.dark ? context.colors.green.withValues(alpha: 0.2) : context.colors.greenLight) : ZussGoTheme.mutedBg(context),
+                    borderRadius: BorderRadius.circular(10),
+                    border: sel ? Border.all(color: context.colors.green, width: 1.5) : Border.all(color: Colors.transparent, width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(g, style: TextStyle(fontSize: 12, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: sel ? context.colors.green : ZussGoTheme.secondaryText(context))),
+                ),
+              ));
+            }).toList()),
+            const SizedBox(height: 14),
+            _editLabel('Travel Style'),
+            Wrap(spacing: 6, runSpacing: 6, children: _styles.map((s) => _chip(s, _travelStyle == s, () => setState(() => _travelStyle = s))).toList()),
+            const SizedBox(height: 16),
+            Text('MINDSET', style: TextStyle(fontSize: 11, color: context.colors.green, fontWeight: FontWeight.w600, letterSpacing: 1)),
+            const SizedBox(height: 10),
+            _editLabel('Schedule'),
+            Wrap(spacing: 6, children: _schedules.map((s) => _chip(s, _schedule == s, () => setState(() => _schedule = s))).toList()),
+            const SizedBox(height: 8),
+            _editLabel('Social Energy'),
+            Wrap(spacing: 6, children: _socials.map((s) => _chip(s, _social == s, () => setState(() => _social = s))).toList()),
+            const SizedBox(height: 8),
+            _editLabel('Planning Style'),
+            Wrap(spacing: 6, children: _plannings.map((s) => _chip(s, _planning == s, () => setState(() => _planning = s))).toList()),
+            const SizedBox(height: 8),
+            _editLabel('Energy Level'),
+            Wrap(spacing: 6, children: _energies.map((s) => _chip(s, _energy == s, () => setState(() => _energy = s))).toList()),
+            const SizedBox(height: 16),
+            Text('INTERESTS & VALUES', style: TextStyle(fontSize: 11, color: context.colors.green, fontWeight: FontWeight.w600, letterSpacing: 1)),
+            const SizedBox(height: 10),
+            _editLabel('Interests'),
+            Wrap(spacing: 6, runSpacing: 6, children: _interestOpts.map((i) => _chip(i, _interests.contains(i), () => setState(() { _interests.contains(i) ? _interests.remove(i) : _interests.add(i); }))).toList()),
+            const SizedBox(height: 8),
+            _editLabel('Values'),
+            Wrap(spacing: 6, runSpacing: 6, children: _valueOpts.map((v) => _chip(v, _values.contains(v), () => setState(() { _values.contains(v) ? _values.remove(v) : _values.add(v); }))).toList()),
+            const SizedBox(height: 8),
+            _editLabel('Travel Priority'),
+            Wrap(spacing: 6, runSpacing: 6, children: _priorities.map((p) => _chip(p, _priority == p, () => setState(() => _priority = p))).toList()),
+            const SizedBox(height: 20),
+            GradientButton(text: 'Save Changes ✓', isLoading: _saving, onPressed: _save),
+            const SizedBox(height: 10),
+            Center(child: GestureDetector(onTap: () => setState(() => _editing = false), child: Text('Cancel', style: TextStyle(fontSize: 13, color: ZussGoTheme.mutedText(context))))),
+          ]),
+        ),
+      ),
+    );
+  }
 
-<<<<<<< HEAD
-          // Fixed bottom nav
-=======
->>>>>>> 65df3af (Added the settings screen)
+  Widget _editLabel(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(t, style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.secondaryText(context), fontSize: 12)),
+  );
+}
+
+// ── STAT CARD ──
+class _StatCard extends StatelessWidget {
+  final String value, label;
+  final Color color, bgCard, borderColor;
+  const _StatCard({required this.value, required this.label, required this.color, required this.bgCard, required this.borderColor});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(children: [
+        Text(value, style: TextStyle(fontFamily: 'Playfair Display', fontSize: 18, fontWeight: FontWeight.w700, color: color)),
+        Text(label, style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: ZussGoTheme.mutedText(context))),
+      ]),
+    ),
+  );
+}
+
+// ── MENU ITEM ──
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor, bgColor;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive, isDark;
+
+  const _MenuItem({
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.label,
+    required this.onTap,
+    required this.isDark,
+    this.isDestructive = false,
+  });
+
           const Positioned(
             bottom: 0, left: 0, right: 0,
             child: ZussGoBottomNav(currentIndex: 4),
           ),
-        ],
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w600, color: isDestructive ? context.colors.rose : textPrimary))),
+          if (!isDestructive) Icon(Icons.chevron_right_rounded, color: isDark ? const Color(0xFF555555) : context.colors.textMuted, size: 18),
+        ]),
       ),
     );
   }
