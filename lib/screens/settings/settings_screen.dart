@@ -20,42 +20,18 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  Map<String, dynamic> _user = {};
-  bool _editing = false, _saving = false;
+  String _userName    = '';
+  String _userInitial = '';
+  String _userCity    = '';
 
-  int _tripCount = 0;
-  int _matchCount = 0;
-  double _avgRating = 0.0;
-  int _totalRatings = 0;
-  bool _statsLoading = true;
-
-  late TextEditingController _nameC, _bioC, _cityC, _ageC;
-  String? _gender, _travelStyle, _schedule, _social, _planning, _energy, _priority;
-  Set<String> _interests = {}, _values = {};
-
-  final _styles = ['Backpacker', 'Explorer', 'Foodie', 'Photography', 'Luxury', 'Party', 'Spiritual', 'Adventure'];
-  final _schedules = ['Early Bird', 'Night Owl'];
-  final _socials = ['Social Butterfly', 'Ambivert', 'Introvert'];
-  final _plannings = ['Planner', 'Spontaneous'];
-  final _energies = ['Chill', 'Energetic', 'Depends'];
-  final _valueOpts = ['Eco-conscious', 'Comfort-first', 'Non-smoker', 'Social drinker', 'Vegetarian', 'Pet friendly'];
-  final _interestOpts = ['Photography', 'Music', 'Water Sports', 'Street Food', 'Yoga', 'Art', 'Reading', 'Trekking', 'Stargazing', 'Camping', 'Journaling', 'Gaming'];
-  final _priorities = ['Foodie-first', 'Adventure', 'Creator', 'Wellness', 'Nightlife', 'Culture'];
-
-  String? _profileImagePath;
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() => _profileImagePath = image.path);
-      final userId = _user['userId'];
-      if (userId != null) {
-        final prefs = await SharedPreferences.getInstance();
-        prefs.setString('localProfileImage_$userId', image.path);
-      }
-    }
-  }
+  static const _items = [
+    {'icon': Icons.person_rounded,        'label': 'Edit Profile',  'sub': 'Photo, bio, vibes',  'route': '/settings/edit-profile'},
+    {'icon': Icons.notifications_rounded, 'label': 'Notifications', 'sub': 'Match alerts',        'route': '/settings/notifications'},
+    {'icon': Icons.shield_rounded,        'label': 'Safety',        'sub': 'Block, report',       'route': '/settings/safety'},
+    {'icon': Icons.auto_awesome_rounded,  'label': 'ZussGo Pro',    'sub': 'Unlock premium',      'route': '/settings/pro'},
+    {'icon': Icons.help_rounded,          'label': 'Support',       'sub': 'Help center',         'route': '/settings/support'},
+    {'icon': Icons.description_rounded,   'label': 'Legal',         'sub': 'Terms & privacy',     'route': '/settings/legal'},
+  ];
 
   @override
   void initState() {
@@ -80,21 +56,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final u = await AuthService.getSavedUser();
     if (u != null && mounted) {
       setState(() {
-        _user = u;
-        _nameC.text = u['fullName'] ?? '';
-        _bioC.text = u['bio'] ?? '';
-        _cityC.text = u['city'] ?? '';
-        _ageC.text = (u['age'] ?? '').toString();
-        if (_ageC.text == 'null') _ageC.text = '';
-        _gender = u['gender'];
-        _travelStyle = u['travelStyle'];
-        _schedule = u['schedule'];
-        _social = u['socialEnergy'];
-        _planning = u['planningStyle'];
-        _energy = u['energyLevel'];
-        _interests = Set<String>.from(u['interests'] ?? []);
-        _values = Set<String>.from(u['values'] ?? []);
-        _priority = u['travelPriority'];
+        _userName    = user['fullName'] ?? 'Traveler';
+        _userInitial = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'Z';
+        _userCity    = user['city'] ?? '';
       });
       final userId = u['userId'];
       if (userId != null) {
@@ -216,22 +180,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _logout() async {
+  Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: ZussGoTheme.cardBg(context),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ZussGoTheme.bgSecondary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Sign Out?', style: context.textTheme.displaySmall!.adaptive(context)),
-        content: Text('You\'ll need to sign in again.', style: context.textTheme.bodyMedium!),
+        title: Text('Sign Out?', style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
+        content: Text('Are you sure you want to sign out?', style: ZussGoTheme.bodySmall),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: ZussGoTheme.mutedText(context))),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: ZussGoTheme.textSecondary)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Sign Out', style: TextStyle(color: context.colors.rose, fontWeight: FontWeight.w600)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sign Out', style: TextStyle(color: ZussGoTheme.rose, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -240,16 +204,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await AuthService.clearSession();
       if (mounted) context.go('/login');
     }
-  }
-
-  String get _name => _user['fullName'] ?? 'Traveler';
-  String get _email => _user['email'] ?? '';
-  String get _style => _user['travelStyle'] ?? '';
-  String get _city => _user['city'] ?? '';
-  String get _ratingDisplay {
-    if (_statsLoading) return '...';
-    if (_totalRatings == 0) return '—';
-    return '${_avgRating.toStringAsFixed(1)} ($_totalRatings)';
   }
 
   Widget _chip(String label, bool sel, VoidCallback onTap) => GestureDetector(
@@ -298,182 +252,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(children: [
                 const SizedBox(height: 12),
 
-                // ── AVATAR ──
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
+                  // Profile header
+                  Row(
                     children: [
                       Container(
-                        width: 76, height: 76,
+                        width: 56, height: 56,
                         decoration: BoxDecoration(
-                          gradient: _profileImagePath == null ? ZussGoTheme.gradientPrimary : null,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.22), blurRadius: 14, offset: const Offset(0, 4))],
-                          image: _profileImagePath != null ? DecorationImage(image: FileImage(File(_profileImagePath!)), fit: BoxFit.cover) : null,
+                          gradient: ZussGoTheme.gradientPrimary,
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         alignment: Alignment.center,
-                        child: _profileImagePath == null ? Text(
-                          _name.isNotEmpty ? _name[0] : 'Z',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 28, fontFamily: 'Playfair Display'),
-                        ) : null,
-                      ),
-                      Positioned(
-                        bottom: -4, right: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), shape: BoxShape.circle, border: Border.all(color: ZussGoTheme.scaffoldBg(context), width: 2)),
-                          child: Icon(Icons.edit_rounded, size: 14, color: context.colors.green),
+                        child: Text(
+                          _userInitial,
+                          style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w700,
+                            color: Colors.white, fontFamily: 'Playfair Display',
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_userName, style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
+                          Text(
+                            _userCity.isNotEmpty ? '$_userCity · 0 trips' : '0 trips',
+                            style: ZussGoTheme.bodySmall,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(_name, style: context.textTheme.displayMedium!.copyWith(fontSize: 22, color: textPrimary)),
-                Text(_email, style: context.textTheme.bodySmall!.copyWith(color: textMuted)),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 28),
 
-                // ── TAGS ──
-                Wrap(alignment: WrapAlignment.center, spacing: 6, children: [
-                  if (_style.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(8)),
-                      child: Text(_style, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.colors.green)),
-                    ),
-                  if (_city.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(8)),
-                      child: Text(_city, style: TextStyle(fontSize: 11, color: textMuted)),
-                    ),
-                  if (_user['schedule'] != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(8)),
+                  // Settings items
+                  ...List.generate(_items.length, (i) {
+                    final item  = _items[i];
+                    final isPro = item['label'] == 'ZussGo Pro';
+                    return GestureDetector(
+                      onTap: () => context.push(item['route'] as String),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: ZussGoTheme.borderDefault)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 38, height: 38,
+                              decoration: BoxDecoration(
+                                color: isPro
+                                    ? ZussGoTheme.rose.withValues(alpha: 0.12)
+                                    : ZussGoTheme.bgSecondary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                item['icon'] as IconData,
+                                size: 20,
+                                color: isPro ? ZussGoTheme.rose : ZussGoTheme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['label'] as String,
+                                    style: ZussGoTheme.labelBold.copyWith(
+                                      fontSize: 14,
+                                      color: isPro ? ZussGoTheme.rose : null,
+                                    ),
+                                  ),
+                                  Text(item['sub'] as String, style: ZussGoTheme.bodySmall),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded, color: ZussGoTheme.textMuted, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+
+                  // Sign Out
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _handleLogout,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: ZussGoTheme.rose.withValues(alpha: 0.15)),
+                        backgroundColor: ZussGoTheme.rose.withValues(alpha: 0.05),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                       child: Text(
-                        _user['schedule'] as String,
-                        style: TextStyle(fontSize: 11, color: textMuted),
+                        'Sign Out',
+                        style: TextStyle(color: ZussGoTheme.rose, fontWeight: FontWeight.w600, fontSize: 14),
                       ),
-                    ),
-                ]),
-                const SizedBox(height: 16),
-
-                // ── STATS ──
-                Row(children: [
-                  _StatCard(value: _statsLoading ? '...' : '$_tripCount', label: 'Trips', color: context.colors.green, bgCard: bgCard, borderColor: borderColor),
-                  const SizedBox(width: 8),
-                  _StatCard(value: _statsLoading ? '...' : '$_matchCount', label: 'Matches', color: context.colors.amber, bgCard: bgCard, borderColor: borderColor),
-                  const SizedBox(width: 8),
-                  _StatCard(value: _ratingDisplay, label: 'Rating', color: context.colors.rose, bgCard: bgCard, borderColor: borderColor),
-                ]),
-                const SizedBox(height: 20),
-
-                // ── MENU ITEMS ──
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('ACCOUNT', style: TextStyle(fontSize: 10, color: context.colors.green, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
-                ),
-                const SizedBox(height: 8),
-                _MenuItem(
-                  icon: Icons.edit_rounded,
-                  iconColor: context.colors.green,
-                  bgColor: context.colors.green.withValues(alpha: isDark ? 0.2 : 0.1),
-                  label: 'Edit Profile',
-                  isDark: isDark,
-                  onTap: () => setState(() => _editing = true),
-                ),
-                _MenuItem(
-                  icon: Icons.phone_rounded,
-                  iconColor: context.colors.rose,
-                  bgColor: context.colors.rose.withValues(alpha: isDark ? 0.2 : 0.08),
-                  label: 'Emergency Contacts',
-                  isDark: isDark,
-                  onTap: () => context.push('/active-trip'),
-                ),
-                _MenuItem(
-                  icon: Icons.notifications_rounded,
-                  iconColor: context.colors.sky,
-                  bgColor: context.colors.sky.withValues(alpha: isDark ? 0.2 : 0.08),
-                  label: 'Notifications',
-                  isDark: isDark,
-                  onTap: () => context.push('/notifications'),
-                ),
-                _MenuItem(
-                  icon: Icons.shield_rounded,
-                  iconColor: context.colors.amber,
-                  bgColor: context.colors.amber.withValues(alpha: isDark ? 0.2 : 0.08),
-                  label: 'Privacy & Safety',
-                  isDark: isDark,
-                  onTap: () => context.push('/privacy'),
-                ),
-                _MenuItem(
-                  icon: Icons.help_rounded,
-                  iconColor: ZussGoTheme.lavender,
-                  bgColor: ZussGoTheme.lavender.withValues(alpha: isDark ? 0.2 : 0.08),
-                  label: 'Help & Support',
-                  isDark: isDark,
-                  onTap: () => context.push('/help-support'),
-                ),
-                _MenuItem(
-                  icon: Icons.logout_rounded,
-                  iconColor: context.colors.rose,
-                  bgColor: context.colors.rose.withValues(alpha: isDark ? 0.15 : 0.06),
-                  label: 'Sign Out',
-                  isDark: isDark,
-                  isDestructive: true,
-                  onTap: _logout,
-                ),
-                const SizedBox(height: 16),
-                Text('ZussGo v1.0 • ArcheTech Global', style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: textMuted)),
-              ]),
-            ),
-          ),
-          const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 4)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEditProfile() {
-    return Scaffold(
-      backgroundColor: ZussGoTheme.scaffoldBg(context),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 28),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              GestureDetector(
-                onTap: () => setState(() => _editing = false),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context), size: 18),
-                ),
-              ),
-              Text('Edit Profile', style: context.textTheme.displaySmall!.adaptive(context)),
-              const SizedBox(width: 34),
-            ]),
-            const SizedBox(height: 20),
-            Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 90, height: 90,
-                      decoration: BoxDecoration(
-                        color: ZussGoTheme.mutedBg(context),
-                        borderRadius: BorderRadius.circular(28),
-                        gradient: _profileImagePath == null ? ZussGoTheme.gradientPrimary : null,
-                        image: _profileImagePath != null ? DecorationImage(image: FileImage(File(_profileImagePath!)), fit: BoxFit.cover) : null,
-                      ),
-                      alignment: Alignment.center,
-                      child: _profileImagePath == null ? Text(
-                        _nameC.text.isNotEmpty ? _nameC.text[0].toUpperCase() : 'Z',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 32, fontFamily: 'Playfair Display'),
-                      ) : null,
                     ),
                     Positioned(
                       bottom: 0, right: 0,
@@ -609,25 +486,9 @@ class _MenuItem extends StatelessWidget {
     this.isDestructive = false,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final textPrimary = isDark ? Colors.white : ZussGoTheme.textPrimary;
-    final borderColor = isDark ? const Color(0xFF2E2E2E) : ZussGoTheme.borderDefault;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: isDestructive ? Colors.transparent : borderColor)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-            alignment: Alignment.center,
-            child: Icon(icon, color: iconColor, size: 18),
+          const Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: ZussGoBottomNav(currentIndex: 4),
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w600, color: isDestructive ? context.colors.rose : textPrimary))),

@@ -123,7 +123,23 @@ class AuthService {
     } catch (e) { return _error(); }
   }
 
-  static Future<Map<String, dynamic>> getUsers({String? userId}) async {
+  // ─── SAVE USER (used by Edit Profile screen) ───
+  // Saves updated user data locally to SharedPreferences
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_data', jsonEncode(user));
+  }
+
+  // ─── UPDATE SAVED USER (for when profile gets completed) ───
+  static Future<void> updateSavedUser(Map<String, dynamic> updatedUser) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_data', jsonEncode(updatedUser));
+  }
+
+  // ─── GET OTHER USERS (for home feed) ───
+  static Future<Map<String, dynamic>> getUsers({
+    required String userId,
+  }) async {
     try {
       final url = userId != null ? '${ApiConfig.users}?userId=$userId' : ApiConfig.users;
       final response = await http.get(Uri.parse(url), headers: {'Content-Type': 'application/json'});
