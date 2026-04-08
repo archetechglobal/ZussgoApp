@@ -10,6 +10,7 @@ import '../../widgets/share_trip_card.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/destination_images.dart';
+import '../../widgets/destination_image.dart';
 
 class PostStatusSheet extends StatefulWidget {
   const PostStatusSheet({super.key});
@@ -147,30 +148,26 @@ class _PostStatusSheetState extends State<PostStatusSheet> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (DestinationImages.getImageFromData(d) != null) ...[
-                              Image.network(DestinationImages.getImageFromData(d)!, fit: BoxFit.cover),
-                              Container(color: Colors.black.withValues(alpha: sel ? 0.3 : 0.5)),
-                            ] else
+                                DestinationImage(
+                                  destination: d,
+                                  fit: BoxFit.cover,
+                                ),
+                                Container(color: Colors.black.withValues(alpha: sel ? 0.3 : 0.5)),
                               Container(color: colors.bgMuted),
                             
                             Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                if (DestinationImages.getImageFromData(d) == null)
-                                  Icon(Icons.public_rounded, size: 24, color: ZussGoTheme.mutedText(context)),
-                                if (sel && DestinationImages.getImageFromData(d) != null)
                                   const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
                                 const SizedBox(height: 4),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4),
                                   child: Text(
                                     d['name'] ?? '',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 11,
-                                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                                      color: DestinationImages.getImageFromData(d) != null 
-                                          ? Colors.white 
-                                          : colors.textPrimary
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                     ),
                                     textAlign: TextAlign.center,
                                     maxLines: 1,
@@ -193,23 +190,15 @@ class _PostStatusSheetState extends State<PostStatusSheet> {
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-              child: Row(children: [
-                if (DestinationImages.getImageFromData(_selectedDest!) != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(
-                        DestinationImages.getImageFromData(_selectedDest!)!,
-                        width: 36, height: 36, fit: BoxFit.cover,
-                      ),
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(Icons.check_circle_rounded, color: context.colors.green, size: 16),
-                  ),
+              child: Row(
+                children: [
+                DestinationImage(
+                  destination: _selectedDest!,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                ),
+                const SizedBox(width: 8),
                 Expanded(child: Text('${_selectedDest!['name']}', style: TextStyle(fontSize: 13, color: context.colors.green, fontWeight: FontWeight.w600))),
               ]),
             ),

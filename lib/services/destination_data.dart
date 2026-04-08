@@ -22,7 +22,7 @@ class DestinationData {
     'kasol': [3, 4, 5, 6, 9, 10],
     'hampi': [10, 11, 12, 1, 2],
     'spiti-valley': [6, 7, 8, 9],
-    'dharamshala': [3, 4, 5, 6, 9, 10],
+    'dharmshala': [3, 4, 5, 6, 9, 10],
     'pondicherry': [10, 11, 12, 1, 2, 3],
     'munnar': [10, 11, 12, 1, 2, 3],
     'coorg': [10, 11, 12, 1, 2, 3],
@@ -200,7 +200,7 @@ class DestinationData {
       {'image': 'https://images.unsplash.com/photo-1506461883276-594a12b11cf3?w=500&q=80', 'name': 'Chandratal Lake', 'info': 'Moon lake'},
       {'image': 'https://images.unsplash.com/photo-1551884173-04724b7a6691?w=500&q=80', 'name': 'Kaza', 'info': 'Main hub'},
     ],
-    'dharamshala': [
+    'dharmshala': [
       {'image': 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&q=80', 'name': 'McLeod Ganj', 'info': 'Little Lhasa'},
       {'image': 'https://images.unsplash.com/photo-1597074866923-dc0589150358?w=500&q=80', 'name': 'HPCA Stadium', 'info': 'Cricket with views'},
       {'image': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80', 'name': 'Triund Trek', 'info': 'Easy day hike'},

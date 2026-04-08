@@ -95,6 +95,7 @@ class AuthService {
 
   static Future<Map<String, dynamic>> profileSetup({
     required String userId,
+    String? fullName,
     String? gender, int? age, String? city, String? bio,
     String? travelStyle, String? schedule, String? socialEnergy, String? planningStyle,
     List<String>? interests, List<String>? values, String? energyLevel, String? travelPriority,
@@ -105,6 +106,7 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userId': userId,
+          if (fullName != null) 'fullName': fullName,
           if (gender != null) 'gender': gender,
           if (age != null) 'age': age,
           if (city != null) 'city': city,

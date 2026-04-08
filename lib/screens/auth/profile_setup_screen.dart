@@ -79,7 +79,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _loading = false);
 
     if (r["success"] == true) {
-      final updatedUser = r["data"]?["user"];
+      final updatedUser = r["data"];
       if (updatedUser != null) await AuthService.updateSavedUser(updatedUser);
       if (mounted) context.go('/home');
     } else { setState(() => _error = r["message"]); }

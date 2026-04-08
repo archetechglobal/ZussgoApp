@@ -19,7 +19,7 @@ class WeatherService {
     'kasol': {'lat': 32.0100, 'lng': 77.3150},
     'hampi': {'lat': 15.3350, 'lng': 76.4600},
     'spiti-valley': {'lat': 32.2460, 'lng': 78.0350},
-    'dharamshala': {'lat': 32.2190, 'lng': 76.3234},
+    'dharmshala': {'lat': 32.2190, 'lng': 76.3234},
     'pondicherry': {'lat': 11.9416, 'lng': 79.8083},
     'munnar': {'lat': 10.0889, 'lng': 77.0595},
     'coorg': {'lat': 12.3375, 'lng': 75.8069},

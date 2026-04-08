@@ -12,6 +12,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/gradient_button.dart';
 import '../../services/auth_service.dart';
 import '../../services/theme_service.dart';
+import '../../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -130,10 +131,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (ratingsRes.statusCode == 200) {
         final rData = jsonDecode(ratingsRes.body);
         if (rData['success'] == true && rData['data'] != null) {
-          final stats = rData['data']['stats'];
-          if (stats != null) {
-            _avgRating = (stats['average'] as num).toDouble();
-            _totalRatings = (stats['totalRatings'] as num).toInt();
+          final dataOrList = rData['data'];
+          if (dataOrList is List) {
+            if (dataOrList.isNotEmpty) {
+              _totalRatings = dataOrList.length;
+              double sum = 0;
+              for (var req in dataOrList) {
+                sum += (req['score'] as num?)?.toDouble() ?? 0.0;
+              }
+              _avgRating = sum / _totalRatings;
+            }
+          } else if (dataOrList is Map) {
+            final stats = dataOrList['stats'];
+            if (stats != null) {
+              _avgRating = (stats['average'] as num).toDouble();
+              _totalRatings = (stats['totalRatings'] as num).toInt();
+            } else if (dataOrList['score'] != null) {
+              _totalRatings = 1;
+              _avgRating = (dataOrList['score'] as num).toDouble();
+            }
           }
         }
       }
@@ -141,68 +157,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() => _statsLoading = false);
   }
 
+  /// Validation block for Profile Settings
+  String? _validateProfile() {
+    if (_nameC.text.trim().isEmpty) {
+      return "Please enter your full name";
+    }
+
+    final ageText = _ageC.text.trim();
+    if (ageText.isEmpty) {
+      return "Please enter your age";
+    }
+    
+    final age = int.tryParse(ageText);
+    if (age == null || age < 18) {
+      return "Age must be 18 or above";
+    }
+
+    if (_gender == null) return "Please select your gender";
+    
+    return null;
+  }
+
   Future<void> _save() async {
+    final validationError = _validateProfile();
+    if (validationError != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(validationError), backgroundColor: context.colors.rose),
+        );
+      }
+      return;
+    }
+
     setState(() => _saving = true);
     final userId = _user['userId'];
     if (userId == null) {
       setState(() => _saving = false);
       return;
     }
+    
     try {
-      final response = await http.post(
-        Uri.parse(ApiConfig.profileSetup),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': userId,
-          'gender': _gender ?? 'Male',
-          'age': int.tryParse(_ageC.text) ?? 0,
-          'city': _cityC.text.trim(),
-          'travelStyle': _travelStyle,
-          'bio': _bioC.text.trim(),
-          'schedule': _schedule,
-          'socialEnergy': _social,
-          'planningStyle': _planning,
-          'energyLevel': _energy,
-          'values': _values.toList(),
-          'interests': _interests.toList(),
-          'travelPriority': _priority,
-        }),
+      final response = await AuthService.profileSetup(
+        userId: userId,
+        fullName: _nameC.text.trim(),
+        gender: _gender,
+        age: int.tryParse(_ageC.text),
+        city: _cityC.text.trim(),
+        travelStyle: _travelStyle,
+        bio: _bioC.text.trim(),
+        schedule: _schedule,
+        socialEnergy: _social,
+        planningStyle: _planning,
+        energyLevel: _energy,
+        values: _values.toList(),
+        interests: _interests.toList(),
+        travelPriority: _priority,
       );
-      final data = jsonDecode(response.body);
+
       setState(() => _saving = false);
-      if (data['success'] == true) {
-        final updated = data['data'];
+      
+      if (response['success'] == true) {
+        final updated = response['data'];
         if (updated != null) {
+          // Flatten structure if backend returns nested user object
+          final userData = updated['user'] ?? updated;
           await AuthService.updateSavedUser({
-            'userId': updated['userId'],
-            'fullName': updated['fullName'] ?? _nameC.text,
-            'email': updated['email'] ?? _user['email'],
-            'gender': updated['gender'],
-            'age': updated['age'],
-            'city': updated['city'],
-            'bio': updated['bio'],
-            'travelStyle': updated['travelStyle'],
+            'userId': userData['userId'] ?? userData['id'] ?? userId,
+            'fullName': userData['fullName'] ?? _nameC.text,
+            'email': userData['email'] ?? _user['email'],
+            'gender': userData['gender'],
+            'age': userData['age'],
+            'city': userData['city'],
+            'bio': userData['bio'],
+            'travelStyle': userData['travelStyle'],
             'isProfileCompleted': true,
-            'schedule': updated['schedule'],
-            'socialEnergy': updated['socialEnergy'],
-            'planningStyle': updated['planningStyle'],
-            'energyLevel': updated['energyLevel'],
-            'values': updated['values'],
-            'interests': updated['interests'],
-            'travelPriority': updated['travelPriority'],
+            'schedule': userData['schedule'],
+            'socialEnergy': userData['socialEnergy'],
+            'planningStyle': userData['planningStyle'],
+            'energyLevel': userData['energyLevel'],
+            'values': userData['values'],
+            'interests': userData['interests'],
+            'travelPriority': userData['travelPriority'],
           });
         }
         await _load();
         setState(() => _editing = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Profile updated! ✓'), backgroundColor: context.colors.green),
+            SnackBar(content: const Text('Profile updated! ✓'), backgroundColor: context.colors.green),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Failed to save')),
+            SnackBar(content: Text(response['message'] ?? 'Failed to save')),
           );
         }
       }
@@ -335,26 +383,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // ── TAGS ──
                 Wrap(alignment: WrapAlignment.center, spacing: 6, children: [
-                  if (_style.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(8)),
-                      child: Text(_style, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.colors.green)),
-                    ),
                   if (_city.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(8)),
                       child: Text(_city, style: TextStyle(fontSize: 11, color: textMuted)),
-                    ),
-                  if (_user['schedule'] != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(8)),
-                      child: Text(
-                        _user['schedule'] as String,
-                        style: TextStyle(fontSize: 11, color: textMuted),
-                      ),
                     ),
                 ]),
                 const SizedBox(height: 16),
@@ -397,7 +430,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   bgColor: context.colors.sky.withValues(alpha: isDark ? 0.2 : 0.08),
                   label: 'Notifications',
                   isDark: isDark,
-                  onTap: () => context.push('/notifications'),
+                  badgeCount: context.watch<NotificationService>().hasUnseenNotifications ? context.watch<NotificationService>().totalUnread : 0,
+                  onTap: () {
+                    context.read<NotificationService>().refresh();
+                    context.push('/notifications');
+                  },
                 ),
                 _MenuItem(
                   icon: Icons.shield_rounded,
@@ -598,6 +635,7 @@ class _MenuItem extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isDestructive, isDark;
+  final int? badgeCount;
 
   const _MenuItem({
     required this.icon,
@@ -607,6 +645,7 @@ class _MenuItem extends StatelessWidget {
     required this.onTap,
     required this.isDark,
     this.isDestructive = false,
+    this.badgeCount,
   });
 
   @override
@@ -631,6 +670,13 @@ class _MenuItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w600, color: isDestructive ? context.colors.rose : textPrimary))),
+          if (badgeCount != null && badgeCount! > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(color: context.colors.rose, borderRadius: BorderRadius.circular(10)),
+              child: Text(badgeCount.toString(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+            ),
           if (!isDestructive) Icon(Icons.chevron_right_rounded, color: isDark ? const Color(0xFF555555) : context.colors.textMuted, size: 18),
         ]),
       ),

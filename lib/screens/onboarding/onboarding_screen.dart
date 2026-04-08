@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/theme.dart';
 import '../../widgets/gradient_button.dart';
 import '../../services/auth_service.dart';
@@ -15,24 +16,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final _pages = [
+  final _pages = const [
     _OnboardingPage(
-      gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF22D3EE)]),
-      icon: Icons.luggage_rounded,
-      title: 'Post Where\nYou\'re Going',
-      subtitle: 'Share your destination & dates. Let other travelers find you and connect.',
+      imageUrl: 'assets/images/onboarding_share_travel.jpg',
+      title: 'Share Your Travel Plan',
+      subtitle: 'Connect with travelers going to the same destination',
     ),
     _OnboardingPage(
-      gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFFBBF24)]),
-      icon: Icons.people_alt_rounded,
-      title: 'Find Your\nPerfect Match',
-      subtitle: 'Filter by age, mindset, travel style & budget. See compatibility scores.',
+      imageUrl: 'assets/images/onboarding_find_match.jpg',
+      title: 'Find the Right Companion',
+      subtitle: 'Match with verified travelers by interests',
     ),
     _OnboardingPage(
-      gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-      icon: Icons.chat_bubble_rounded,
-      title: 'Solo or Group\n— You Choose',
-      subtitle: 'Match 1-on-1 or join group trips with 3+ travelers. Chat, plan & go together.',
+      imageUrl: 'assets/images/onboarding_travel_way.jpg',
+      title: 'Travel Your Way',
+      subtitle: 'Choose solo or group trips',
     ),
   ];
 
@@ -80,21 +78,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              gradient: page.gradient,
                               borderRadius: BorderRadius.circular(28),
-                            ),
-                            child: Stack(
-                              children: [
-                                Center(child: Opacity(opacity: 0.12, child: Icon(page.icon, size: 120, color: Colors.white))),
-                                Positioned(
-                                  bottom: 20, left: 20,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                                    child: Icon(page.icon, size: 24, color: Colors.white),
-                                  ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(28),
+                              child: page.imageUrl.startsWith('http')
+                                  ? CachedNetworkImage(
+                                      imageUrl: page.imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (context, url, dynamic error) {
+                                        return Container(
+                                          color: ZussGoTheme.mutedBg(context),
+                                          child: Center(
+                                            child: Icon(Icons.image_not_supported, color: ZussGoTheme.mutedText(context)),
+                                          ),
+                                        );
+                                      },
+                                      placeholder: (context, url) => Container(
+                                        color: ZussGoTheme.mutedBg(context),
+                                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      page.imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: ZussGoTheme.mutedBg(context),
+                                          child: Center(
+                                            child: Icon(Icons.image_not_supported, color: ZussGoTheme.mutedText(context)),
+                                          ),
+                                        );
+                                      },
+                                    ),
                             ),
                           ),
                         ),
@@ -115,18 +138,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       duration: const Duration(milliseconds: 300),
                                       margin: const EdgeInsets.symmetric(horizontal: 3),
                                       width: isActive ? 24 : 8,
-                                      height: 5,
+                                      height: 6,
                                       decoration: BoxDecoration(
-                                        color: isActive ? context.colors.green : ZussGoTheme.borderDefault,
+                                        color: isActive ? context.colors.green : ZussGoTheme.border(context),
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                     );
                                   }),
                                 ),
-                                const SizedBox(height: 20),
-                                Text(page.title, style: context.textTheme.displayLarge!.copyWith(fontSize: 28), textAlign: TextAlign.center),
-                                const SizedBox(height: 10),
-                                Text(page.subtitle, style: context.textTheme.bodyMedium!, textAlign: TextAlign.center),
+                                const SizedBox(height: 28),
+                                Text(
+                                  page.title, 
+                                  style: context.textTheme.displayLarge!.copyWith(fontSize: 30), 
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  page.subtitle, 
+                                  style: context.textTheme.bodyMedium!.copyWith(fontSize: 15), 
+                                  textAlign: TextAlign.center,
+                                ),
                                 const Spacer(),
                                 GradientButton(
                                   text: _currentPage == 2 ? 'Get Started' : 'Next →',
@@ -139,8 +170,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: 'Already have an account? ',
-                                        style: context.textTheme.bodySmall!.adaptive(context),
-                                        children: [TextSpan(text: 'Sign In', style: TextStyle(color: context.colors.green, fontWeight: FontWeight.w600))],
+                                        style: context.textTheme.bodySmall!.adaptive(context).copyWith(fontSize: 13),
+                                        children: [
+                                          TextSpan(
+                                            text: 'Sign In', 
+                                            style: TextStyle(
+                                              color: context.colors.green, 
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -164,9 +203,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _OnboardingPage {
-  final LinearGradient gradient;
-  final IconData icon;
+  final String imageUrl;
   final String title;
   final String subtitle;
-  const _OnboardingPage({required this.gradient, required this.icon, required this.title, required this.subtitle});
+  const _OnboardingPage({
+    required this.imageUrl, 
+    required this.title, 
+    required this.subtitle,
+  });
 }

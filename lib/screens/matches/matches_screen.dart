@@ -4,6 +4,8 @@ import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../../services/notification_service.dart';
 
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
@@ -15,9 +17,14 @@ class _MatchesScreenState extends State<MatchesScreen> {
   List<Map<String, dynamic>> _pending = [], _sent = [], _matches = [];
   bool _loading = true;
   String? _userId;
+  final _searchC = TextEditingController();
+  String _searchQ = '';
 
   @override
   void initState() { super.initState(); _loadAll(); }
+
+  @override
+  void dispose() { _searchC.dispose(); super.dispose(); }
 
   Future<void> _loadAll() async {
     final u = await AuthService.getSavedUser();
@@ -49,6 +56,15 @@ class _MatchesScreenState extends State<MatchesScreen> {
   Color _c(int i) {
     final cs = [context.colors.green, context.colors.sky, context.colors.amber, context.colors.rose, ZussGoTheme.lavender];
     return cs[i % cs.length];
+  }
+
+  List<Map<String, dynamic>> get _filteredMatches {
+    if (_searchQ.isEmpty) return _matches;
+    final q = _searchQ.toLowerCase();
+    return _matches.where((m) {
+      final n = (m['otherUser']?['fullName'] ?? '').toString().toLowerCase();
+      return n.contains(q);
+    }).toList();
   }
 
   @override
@@ -86,11 +102,38 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     Icon(Icons.chat_bubble_outline_rounded, color: textPri, size: 16),
                     const SizedBox(width: 6),
                     Text('Chats', style: TextStyle(color: textPri, fontWeight: FontWeight.w600, fontSize: 13)),
+                    if (context.watch<NotificationService>().unreadMessageCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: context.colors.green, borderRadius: BorderRadius.circular(10)),
+                        child: Text('${context.watch<NotificationService>().unreadMessageCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                      ),
+                    ]
                   ]),
                 ),
               ),
             ]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
+
+            // ── SEARCH BAR ──
+            TextField(
+              controller: _searchC,
+              style: context.textTheme.bodyMedium!.copyWith(color: textPri),
+              decoration: InputDecoration(
+                hintText: 'Search connections...',
+                hintStyle: context.textTheme.bodyMedium!.copyWith(color: textMut),
+                prefixIcon: Icon(Icons.search_rounded, color: textMut, size: 20),
+                suffixIcon: _searchQ.isNotEmpty ? IconButton(icon: Icon(Icons.close_rounded, size: 18, color: textMut), onPressed: () { _searchC.clear(); setState(() => _searchQ = ''); }) : null,
+                filled: true,
+                fillColor: bgMuted,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.4))),
+              ),
+              onChanged: (v) => setState(() => _searchQ = v),
+            ),
+            const SizedBox(height: 20),
 
             if (_loading)
               Padding(padding: const EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green))),
@@ -237,56 +280,88 @@ class _MatchesScreenState extends State<MatchesScreen> {
             ],
 
             // ── MATCHED ──
-            if (!_loading && _matches.isNotEmpty) ...[
+            if (!_loading && (_matches.isNotEmpty || _searchQ.isNotEmpty)) ...[
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 12, top: 4),
                 child: Text('CONNECTIONS', style: TextStyle(fontSize: 11, color: textPri, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
               ),
-              ...List.generate(_matches.length, (i) {
-                final m = _matches[i];
-                final o = m['otherUser'] ?? {};
-                final d = m['trip']?['destination'] ?? {};
-                final cv = m['conversation'];
-                return GestureDetector(
-                  onTap: () { if (cv?['id'] != null) context.push('/chat/${cv['id']}'); },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: bgCard,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : Border.all(color: borderCol.withValues(alpha: 0.5)),
-                      boxShadow: [
-                        if (Theme.of(context).brightness == Brightness.light)
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: Row(children: [
-                      Container(
-                        width: 48, height: 48,
-                        decoration: BoxDecoration(color: _c(i).withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(16)),
-                        alignment: Alignment.center,
-                        child: Text((o['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _c(i), fontFamily: 'Playfair Display')),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(o['fullName'] ?? '', style: context.textTheme.labelLarge!.copyWith(color: textPri, fontSize: 15)),
-                        const SizedBox(height: 4),
-                        if (cv?['lastMessage'] != null)
-                          Text(cv['lastMessage'], style: context.textTheme.bodyMedium!.copyWith(color: textMut, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)
-                        else
-                          Text('Connected for ${d['name'] ?? 'trip'}', style: context.textTheme.bodySmall!.copyWith(color: textSec, fontSize: 12)),
-                      ])),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(color: bgPage, border: Border.all(color: borderCol), borderRadius: BorderRadius.circular(12)),
-                        child: Text('Message', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textPri)),
-                      ),
-                    ]),
+              if (_filteredMatches.isEmpty && _searchQ.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: Column(
+                    children: [
+                      Icon(Icons.search_off_rounded, size: 40, color: textMut.withValues(alpha: 0.4)),
+                      const SizedBox(height: 12),
+                      Text('No matches for "$_searchQ"', style: context.textTheme.bodyMedium!.copyWith(color: textMut)),
+                    ],
                   ),
-                );
-              }),
+                )
+              else
+                ...List.generate(_filteredMatches.length, (i) {
+                  final m = _filteredMatches[i];
+                  final o = m['otherUser'] ?? {};
+                  final d = m['trip']?['destination'] ?? {};
+                  final cv = m['conversation'];
+                  final unreadCount = (m['unreadCount'] as num?)?.toInt() ?? 0;
+                  
+                  return GestureDetector(
+                    onTap: () async { 
+                      if (cv?['id'] != null) {
+                        await context.push('/chat/${cv['id']}'); 
+                        _loadAll(); 
+                      } 
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: bgCard,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : Border.all(color: borderCol.withValues(alpha: 0.5)),
+                        boxShadow: [
+                          if (Theme.of(context).brightness == Brightness.light)
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Row(children: [
+                        Container(
+                          width: 48, height: 48,
+                          decoration: BoxDecoration(color: _c(i).withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(16)),
+                          alignment: Alignment.center,
+                          child: Text((o['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _c(i), fontFamily: 'Playfair Display')),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(o['fullName'] ?? '', style: context.textTheme.labelLarge!.copyWith(color: unreadCount > 0 ? context.colors.green : textPri, fontSize: 15, fontWeight: unreadCount > 0 ? FontWeight.w800 : null)),
+                          const SizedBox(height: 4),
+                          if (cv?['lastMessage'] != null)
+                            Text(cv['lastMessage'], style: context.textTheme.bodyMedium!.copyWith(
+                              color: unreadCount > 0 ? textPri : textMut, 
+                              fontWeight: unreadCount > 0 ? FontWeight.w800 : null,
+                              fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)
+                          else
+                            Text('Connected for ${d['name'] ?? 'trip'}', style: context.textTheme.bodySmall!.copyWith(color: textSec, fontSize: 12)),
+                        ])),
+                        const SizedBox(width: 10),
+                        if (unreadCount > 0)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: context.colors.green, shape: BoxShape.circle),
+                            alignment: Alignment.center,
+                            child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(color: unreadCount > 0 ? context.colors.green : bgPage, border: unreadCount > 0 ? null : Border.all(color: borderCol), borderRadius: BorderRadius.circular(12)),
+                          child: Text('Message', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: unreadCount > 0 ? Colors.white : textPri)),
+                        ),
+                      ]),
+                    ),
+                  );
+                }),
             ],
 
           ]),

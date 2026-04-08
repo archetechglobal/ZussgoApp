@@ -6,6 +6,7 @@ import '../../widgets/gradient_button.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/destination_images.dart';
+import '../../widgets/destination_image.dart';
 
 class MyTripsScreen extends StatefulWidget {
   const MyTripsScreen({super.key});
@@ -65,18 +66,19 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                   // Hero
                   Builder(
                     builder: (context) {
-                      final imageUrl = DestinationImages.getImageFromData(d);
                       return Container(
                         height: 100,
                         decoration: BoxDecoration(gradient: _dg(i), borderRadius: const BorderRadius.only(topLeft: Radius.circular(22), topRight: Radius.circular(22))),
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (imageUrl != null)
-                              ClipRRect(
-                                borderRadius: const BorderRadius.only(topLeft: Radius.circular(22), topRight: Radius.circular(22)),
-                                child: Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(topLeft: Radius.circular(22), topRight: Radius.circular(22)),
+                              child: DestinationImage(
+                                destination: d,
+                                fit: BoxFit.cover,
                               ),
+                            ),
                             Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)]),
@@ -130,11 +132,15 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
             final t = _past[i]; final d = t['destination'] ?? {};
             return Opacity(opacity: 0.7, child: Container(padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(bottom: 6), decoration: BoxDecoration(color: ZussGoTheme.cardBg(context), borderRadius: BorderRadius.circular(16), border: isDark ? Border.all(color: ZussGoTheme.border(context)) : null, boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))]),
                 child: Row(children: [
-                  Container(width: 32, height: 32, decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(8)), child: Builder(builder: (_) {
-                    final img = DestinationImages.getImageFromData(d);
-                    if (img != null) return ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.landscape_rounded, size: 16, color: ZussGoTheme.mutedText(context))));
-                    return Icon(Icons.landscape_rounded, size: 16, color: ZussGoTheme.mutedText(context));
-                  })), 
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(8)),
+                    clipBehavior: Clip.hardEdge,
+                    child: DestinationImage(
+                      destination: d,
+                      fit: BoxFit.cover,
+                    ),
+                  ), 
                   const SizedBox(width: 10),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d['name'] ?? 'Trip', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.primaryText(context))), Text('${_fmt(t['startDate'])} — ${_fmt(t['endDate'])}', style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.secondaryText(context)))])])));
           }),

@@ -43,16 +43,23 @@ class _TripCompleteScreenState extends State<TripCompleteScreen> with SingleTick
   Future<void> _submit(String raterId, String rateeId, String type) async {
     if (_score == 0) return;
     setState(() => _isLoading = true);
-    await ApiService.submitRating(
-      raterId: raterId,
-      rateeId: rateeId,
-      tripId: widget.trip?['id'] ?? 'dummy_trip',
+    final response = await ApiService.createRating(
+      userId: raterId,
+      ratedId: rateeId,
+      tripId: widget.trip?['id'] ?? '00000000-0000-0000-0000-000000000000',
       score: _score,
       review: _reviewCtrl.text.trim(),
     );
     if (!mounted) return;
     setState(() => _isLoading = false);
-    context.pop(); // Go back home
+    
+    if (response['success'] == true) {
+      context.pop(); // Go back home
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? 'Failed to submit rating'), backgroundColor: context.colors.rose),
+      );
+    }
   }
 
   Widget _buildStars() {

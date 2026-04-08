@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../config/theme.dart';
+import '../services/notification_service.dart';
 
 class ZussGoBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -48,6 +50,13 @@ class _NavIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = index == currentIndex;
+    
+    // Watch unseen notifications flag for the matches tab
+    bool hasUnseen = false;
+    if (index == 2) {
+      hasUnseen = context.watch<NotificationService>().hasUnseenNotifications;
+    }
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -56,7 +65,26 @@ class _NavIcon extends StatelessWidget {
         decoration: isActive
             ? BoxDecoration(color: context.colors.green, shape: BoxShape.circle, boxShadow: [BoxShadow(color: context.colors.green.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3))])
             : null,
-        child: Icon(icon, size: 22, color: isActive ? Colors.white : ZussGoTheme.mutedText(context)),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, size: 22, color: isActive ? Colors.white : ZussGoTheme.mutedText(context)),
+            if (index == 2 && hasUnseen)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.redAccent : context.colors.rose,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isActive ? context.colors.green : ZussGoTheme.cardBg(context), width: 1.5),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

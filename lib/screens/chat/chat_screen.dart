@@ -7,6 +7,8 @@ import '../../config/theme.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
+import 'package:provider/provider.dart';
+import '../../services/notification_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String matchId;
@@ -19,7 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _msgC = TextEditingController();
   final _scrollC = ScrollController();
   List<Map<String, dynamic>> _messages = [];
-  String? _userId, _otherName, _otherInitial, _tripInfo;
+  String? _userId, _otherUserId, _otherName, _otherInitial, _tripInfo, _otherRating;
   bool _loading = true, _typing = false;
   StreamSubscription? _msgSub, _typeSub;
   Timer? _typeTimer;
@@ -53,14 +55,21 @@ class _ChatScreenState extends State<ChatScreen> {
     if (cr["success"] == true) {
       for (var c in List<Map<String, dynamic>>.from(cr["data"] ?? [])) {
         if (c['conversationId'] == widget.matchId) {
-          final o = c['otherUser'] ?? {}; _otherName = o['fullName'] ?? 'Traveler'; _otherInitial = (_otherName ?? 'T')[0].toUpperCase();
+          final o = c['otherUser'] ?? {}; 
+          _otherUserId = o['id']?.toString() ?? o['_id']?.toString();
+          _otherName = o['fullName'] ?? 'Traveler'; 
+          _otherInitial = (_otherName ?? 'T')[0].toUpperCase();
+          _otherRating = o['rating']?.toString();
           final d = c['trip']?['destination']; if (d != null) _tripInfo = '${d['emoji'] ?? ''} ${d['name'] ?? ''}'; break;
         }
       }
     }
 
     final mr = await ApiService.getMessages(widget.matchId, _userId!);
-    if (mr["success"] == true) _messages = List<Map<String, dynamic>>.from(mr["data"] ?? []).reversed.toList();
+    if (mr["success"] == true) {
+      _messages = List<Map<String, dynamic>>.from(mr["data"] ?? []).reversed.toList();
+      if (mounted) context.read<NotificationService>().refresh();
+    }
     if (mounted) { setState(() => _loading = false); _scrollDown(); }
   }
 
@@ -82,14 +91,32 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Row(children: [
             GestureDetector(onTap: () => context.pop(), child: Container(width: 34, height: 34, decoration: BoxDecoration(color: ZussGoTheme.mutedBg(context), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.arrow_back_rounded, color: ZussGoTheme.secondaryText(context), size: 18))),
             const SizedBox(width: 10),
-            Container(width: 38, height: 38, decoration: BoxDecoration(color: context.colors.sky.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                alignment: Alignment.center, child: Text(_otherInitial ?? '?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.colors.sky, fontFamily: 'Playfair Display'))),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [Text(_otherName ?? '...', style: context.textTheme.labelLarge!.copyWith(fontSize: 13)), SizedBox(width: 4), Container(width: 6, height: 6, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle))]),
-              if (_typing) Text('typing...', style: TextStyle(fontSize: 10, color: context.colors.green, fontStyle: FontStyle.italic))
-              else if (_tripInfo != null) Text(_tripInfo!, style: context.textTheme.bodySmall!.adaptive(context)),
-            ])),
+            Expanded(child: GestureDetector(
+              onTap: () { if (_otherUserId != null) context.push('/traveler/$_otherUserId', extra: {'isConnected': true}); },
+              child: Container(
+                color: Colors.transparent, // Ensure gesture detector captures taps on whitespace
+                child: Row(children: [
+                  Container(width: 38, height: 38, decoration: BoxDecoration(color: context.colors.sky.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+                      alignment: Alignment.center, child: Text(_otherInitial ?? '?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.colors.sky, fontFamily: 'Playfair Display'))),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Flexible(child: Text(_otherName ?? '...', style: context.textTheme.labelLarge!.copyWith(fontSize: 13), overflow: TextOverflow.ellipsis)), 
+                      const SizedBox(width: 4), 
+                      Container(width: 6, height: 6, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle)),
+                      if (_otherRating != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.star_rounded, size: 12, color: context.colors.amber),
+                        const SizedBox(width: 2),
+                        Text(_otherRating!, style: TextStyle(color: context.colors.amber, fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'Outfit')),
+                      ]
+                    ]),
+                    if (_typing) Text('typing...', style: TextStyle(fontSize: 10, color: context.colors.green, fontStyle: FontStyle.italic))
+                    else if (_tripInfo != null) Text(_tripInfo!, style: context.textTheme.bodySmall!.adaptive(context)),
+                  ])),
+                ]),
+              ),
+            )),
           ])),
 
       // Trip banner
