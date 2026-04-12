@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/destination_data.dart';
 import '../../services/weather_service.dart';
 import '../../services/destination_images.dart';
+import '../../widgets/destination_image.dart';
 
 class DestinationDetailScreen extends StatefulWidget {
   final String destinationId;
@@ -74,21 +75,16 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   Color _tc(int i) { final cs = [context.colors.rose, context.colors.sky, context.colors.amber, ZussGoTheme.lavender, context.colors.green]; return cs[i % cs.length]; }
 
   Widget _buildHero() {
-    final imageUrl = DestinationImages.getImageFromData(_dest!);
-    return Container(
+    return SizedBox(
       height: 280,
       width: double.infinity,
-      decoration: imageUrl != null 
-          ? BoxDecoration(image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover))
-          : const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
+          DestinationImage(
+            destination: _dest!,
+            fit: BoxFit.cover,
+          ),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

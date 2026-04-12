@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
 import '../../services/destination_data.dart';
 import '../../services/destination_images.dart';
+import '../../widgets/destination_image.dart';
 import 'package:provider/provider.dart';
 import '../../services/theme_service.dart';
 import '../../services/weather_service.dart';
@@ -246,7 +247,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           final w = _weatherData[slug];
                           final temp = w?['temp'] ?? '--';
                           final wIcon = w?['icon'] ?? '🌤️';
-                          final imageUrl = DestinationImages.getImageFromData(d);
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 10),
@@ -263,29 +263,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      if (imageUrl != null)
-                                        Image.network(
-                                          imageUrl,
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (context, child, progress) {
-                                            if (progress == null) return child;
-                                            return Container(
-                                              color: bgCard,
-                                              child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 1.5, color: context.colors.green.withValues(alpha: 0.4)))),
-                                            );
-                                          },
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              color: bgMuted,
-                                              child: Center(child: Icon(Icons.landscape_rounded, size: 36, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
-                                            );
-                                          },
-                                        )
-                                      else
-                                        Container(
-                                          color: bgMuted,
-                                          child: Center(child: Icon(Icons.landscape_rounded, size: 36, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
-                                        ),
+                                      DestinationImage(
+                                        destination: d,
+                                        width: 150,
+                                        height: 195,
+                                        fit: BoxFit.cover,
+                                      ),
                                       Container(
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(

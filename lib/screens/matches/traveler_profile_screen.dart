@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../widgets/gradient_button.dart';
 import '../../services/api_service.dart';
@@ -14,6 +17,7 @@ class TravelerProfileScreen extends StatefulWidget {
 
 class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
   bool _sending = false, _sent = false, _loading = true;
+  bool _isConnected = false;
   String? _tripId, _error;
   Map<String, dynamic>? _profile;
 
@@ -31,6 +35,7 @@ class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
     if (e is Map<String, dynamic>) {
       if (e['tripId'] != null) _tripId = e['tripId'];
       if (e['score'] != null) _score = (e['score'] as num).toDouble();
+      if (e['isConnected'] == true) _isConnected = true;
     }
   }
 
@@ -40,8 +45,27 @@ class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
     final r = await ApiService.getUserProfile(widget.travelerId, currentUserId: uid);
     if (mounted) {
       if (r["success"] == true) {
+        final profileData = r["data"];
+        if (profileData != null && profileData['rating'] == null) {
+          try {
+            final r2 = await http.get(Uri.parse(ApiConfig.ratingsByUser(widget.travelerId)));
+            if (r2.statusCode == 200) {
+              final rData = jsonDecode(r2.body);
+              if (rData['success'] == true && rData['data'] != null) {
+                final dList = rData['data'];
+                if (dList is List && dList.isNotEmpty) {
+                  double sum = 0;
+                  for (var i in dList) sum += (i['score'] as num?)?.toDouble() ?? 0.0;
+                  profileData['rating'] = (sum / dList.length).toStringAsFixed(1);
+                } else if (dList is Map && dList['stats'] != null) {
+                  profileData['rating'] = (dList['stats']['average'] as num).toDouble().toStringAsFixed(1);
+                }
+              }
+            }
+          } catch (_) {}
+        }
         setState(() {
-          _profile = r["data"];
+          _profile = profileData;
           _loading = false;
         });
       } else {
@@ -183,8 +207,9 @@ class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
           children: [
             // Banner & Top Section exactly like Image 3
             SizedBox(
-              height: 380,
+              height: 330,
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Container(
                     height: 280,
@@ -242,37 +267,50 @@ class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 330,
-                    left: 24,
-                    right: 24,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                ],
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p['fullName'] ?? 'Traveler', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 26, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context))),
-                            Text('${p['age'] ?? 'Age'} • ${p['gender'] ?? 'Gender'} • ${p['city'] ?? 'Location'}', style: TextStyle(fontSize: 14, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit')),
-                          ],
+                        Text(
+                          p['fullName'] ?? 'Traveler', 
+                          style: TextStyle(fontFamily: 'Playfair Display', fontSize: 26, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('${p['rating'] ?? '4.8'}', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w800, color: context.colors.amber)),
-                            Row(
-                              children: [
-                                Icon(Icons.star_rounded, color: context.colors.amber, size: 14),
-                                const SizedBox(width: 2),
-                                Text('Rating', style: TextStyle(fontSize: 11, color: context.colors.amber)),
-                              ],
-                            ),
-                          ],
-                        )
+                        const SizedBox(height: 4),
+                        Text(
+                          '${p['age'] ?? 'Age'} • ${p['gender'] ?? 'Gender'} • ${p['city'] ?? 'Location'}', 
+                          style: TextStyle(fontSize: 14, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('${p['rating'] ?? '0.0'}', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w800, color: context.colors.amber)),
+                      Row(
+                        children: [
+                          Icon(Icons.star_rounded, color: context.colors.amber, size: 14),
+                          const SizedBox(width: 2),
+                          Text('Rating', style: TextStyle(fontSize: 11, color: context.colors.amber)),
+                        ],
+                      ),
+                    ],
+                  )
                 ],
               ),
             ),
@@ -378,55 +416,58 @@ class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
                   const SizedBox(height: 24),
 
                   // Action Buttons matching Mockup 3
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            decoration: BoxDecoration(
-                              color: ZussGoTheme.cardBg(context),
-                              border: Border.all(color: ZussGoTheme.border(context), width: 1.5),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02), blurRadius: 6)],
+                  if (!_isConnected) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: GestureDetector(
+                            onTap: () => context.pop(),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              decoration: BoxDecoration(
+                                color: ZussGoTheme.cardBg(context),
+                                border: Border.all(color: ZussGoTheme.border(context), width: 1.5),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02), blurRadius: 6)],
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('Pass', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: ZussGoTheme.primaryText(context), fontSize: 16)),
                             ),
-                            alignment: Alignment.center,
-                            child: Text('Pass', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: ZussGoTheme.primaryText(context), fontSize: 16)),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _sent
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(16)),
-                                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_rounded, color: context.colors.green, size: 20), SizedBox(width: 8), Text('Sent ✓', style: TextStyle(color: context.colors.green, fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 16))]))
-                            : GestureDetector(
-                                onTap: _sendRequest,
-                                child: Container(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: _sent
+                              ? Container(
                                   padding: const EdgeInsets.symmetric(vertical: 18),
-                                  decoration: BoxDecoration(color: const Color(0xFF2D9F6F), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: const Color(0xFF2D9F6F).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      if (_sending) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) else ...[
-                                        const Text("Send Request", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Outfit')),
+                                  decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(16)),
+                                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_rounded, color: context.colors.green, size: 20), SizedBox(width: 8), Text('Sent ✓', style: TextStyle(color: context.colors.green, fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 16))]))
+                              : GestureDetector(
+                                  onTap: _sendRequest,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    decoration: BoxDecoration(color: const Color(0xFF2D9F6F), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: const Color(0xFF2D9F6F).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (_sending) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) else ...[
+                                          const Text("Send Request", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Outfit')),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () => context.push('/trip-complete', extra: {'trip': {'id': _tripId}, 'ratee': _profile, 'isGroup': false}),
-                    child: Container(
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_isConnected)
+                    GestureDetector(
+                      onTap: () => context.push('/trip-complete', extra: {'trip': {'id': _tripId}, 'ratee': _profile, 'isGroup': false}),
+                      child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(color: context.colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),

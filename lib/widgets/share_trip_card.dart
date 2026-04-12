@@ -22,9 +22,8 @@ class ShareTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = destinationData != null 
-        ? DestinationImages.getImageFromData(destinationData!) 
-        : null;
+    final slug = destinationData?['slug']?.toString().toLowerCase() ?? '';
+    final assetPath = DestinationImages.getAssetPath(slug);
 
     return Container(
       width: 320,
@@ -39,13 +38,10 @@ class ShareTripCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background Image
-            if (imageUrl != null)
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-              )
-            else
-              Container(
+            Image.asset(
+              assetPath,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -54,6 +50,7 @@ class ShareTripCard extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
 
             // Dark Overlay
             Container(

@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../services/destination_images.dart';
+import '../../widgets/destination_image.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -35,13 +36,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = false;
         if (r['success'] == true && r['data'] != null) {
           _destinations = List<Map<String, dynamic>>.from(r['data']);
-          _destinations.sort((a, b) {
-            final hasA = DestinationImages.getImageFromData(a) != null;
-            final hasB = DestinationImages.getImageFromData(b) != null;
-            if (hasA && !hasB) return -1;
-            if (!hasA && hasB) return 1;
-            return 0;
-          });
+          _destinations.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
         }
       });
     }
@@ -56,13 +51,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = false;
         if (r['success'] == true && r['data'] != null) {
           _destinations = List<Map<String, dynamic>>.from(r['data']);
-          _destinations.sort((a, b) {
-            final hasA = DestinationImages.getImageFromData(a) != null;
-            final hasB = DestinationImages.getImageFromData(b) != null;
-            if (hasA && !hasB) return -1;
-            if (!hasA && hasB) return 1;
-            return 0;
-          });
+          _destinations.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
         }
       });
     }
@@ -161,7 +150,6 @@ class _SearchScreenState extends State<SearchScreen> {
                         itemCount: _destinations.length,
                         itemBuilder: (_, i) {
                           final d = _destinations[i];
-                          final imageUrl = DestinationImages.getImageFromData(d);
                           return GestureDetector(
                             onTap: () => context.push('/destination/${d['slug']}'),
                             child: Container(
@@ -174,25 +162,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    if (imageUrl != null)
-                                      Image.network(
-                                        imageUrl,
+                                      DestinationImage(
+                                        destination: d,
                                         fit: BoxFit.cover,
-                                        loadingBuilder: (context, child, progress) {
-                                          if (progress == null) return child;
-                                          return Container(color: bgCard, child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 1.5, color: context.colors.green.withValues(alpha: 0.4)))));
-                                        },
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
-                                            child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
-                                          );
-                                        },
-                                      )
-                                    else
-                                      Container(
-                                        decoration: BoxDecoration(gradient: LinearGradient(colors: [bgCard, bgMuted])),
-                                        child: Center(child: Icon(Icons.landscape_rounded, size: 44, color: ZussGoTheme.mutedText(context).withValues(alpha: 0.4))),
                                       ),
                                     Container(
                                       decoration: BoxDecoration(
