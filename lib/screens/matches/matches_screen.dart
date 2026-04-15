@@ -1,11 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import '../../config/theme.dart';
+import '../../config/api.dart';
 import '../../widgets/bottom_nav.dart';
-import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
-import 'package:provider/provider.dart';
-import '../../services/notification_service.dart';
 
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
@@ -14,360 +15,302 @@ class MatchesScreen extends StatefulWidget {
 }
 
 class _MatchesScreenState extends State<MatchesScreen> {
-  List<Map<String, dynamic>> _pending = [], _sent = [], _matches = [];
   bool _loading = true;
-  String? _userId;
-  final _searchC = TextEditingController();
-  String _searchQ = '';
+  int _balance = 0;
+  String _tier = 'Explorer';
+  String _tierEmoji = '🌱';
+  int _cashbackValue = 0;
+  Map<String, dynamic>? _nextTier;
+  List<Map<String, dynamic>> _tiers = [];
+  List<Map<String, dynamic>> _activity = [];
+  List<Map<String, dynamic>> _offers = [];
 
   @override
-  void initState() { super.initState(); _loadAll(); }
-
-  @override
-  void dispose() { _searchC.dispose(); super.dispose(); }
-
-  Future<void> _loadAll() async {
-    final u = await AuthService.getSavedUser();
-    _userId = u?['userId'];
-    if (_userId == null) { setState(() => _loading = false); return; }
-    final r = await Future.wait([
-      ApiService.getPendingRequests(_userId!),
-      ApiService.getSentRequests(_userId!),
-      ApiService.getMatches(_userId!),
-    ]);
-    if (mounted) setState(() {
-      _loading = false;
-      if (r[0]["success"] == true) _pending = List<Map<String, dynamic>>.from(r[0]["data"] ?? []);
-      if (r[1]["success"] == true) _sent    = List<Map<String, dynamic>>.from(r[1]["data"] ?? []);
-      if (r[2]["success"] == true) _matches = List<Map<String, dynamic>>.from(r[2]["data"] ?? []);
-    });
+  void initState() {
+    super.initState();
+    _load();
   }
 
-  Future<void> _accept(String id) async {
-    final r = await ApiService.acceptMatchRequest(id, _userId!);
-    if (r["success"] == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Connection request accepted.'), backgroundColor: context.colors.green));
+  Future<void> _load() async {
+    final user = await AuthService.getSavedUser();
+    final userId = user?['userId'];
+    if (userId == null) { setState(() => _loading = false); return; }
+
+    try {
+      final r = await http.get(Uri.parse('${ApiConfig.rewards}?userId=$userId'));
+      if (r.statusCode == 200) {
+        final data = jsonDecode(r.body);
+        if (data['success'] == true && data['data'] != null) {
+          final d = data['data'];
+          if (mounted) {
+            setState(() {
+              _balance = d['balance'] ?? 0;
+              _tier = d['tier'] ?? 'Explorer';
+              _tierEmoji = d['tierEmoji'] ?? '🌱';
+              _cashbackValue = d['cashbackValue'] ?? 0;
+              _nextTier = d['nextTier'];
+              _tiers = List<Map<String, dynamic>>.from(d['tiers'] ?? []);
+              _activity = List<Map<String, dynamic>>.from(d['recentActivity'] ?? []);
+              _offers = List<Map<String, dynamic>>.from(d['offers'] ?? []);
+              _loading = false;
+            });
+          }
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback to defaults if API fails
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _tiers = [
+          {'name': 'Explorer', 'emoji': '🌱', 'range': '0–499', 'isActive': _tier == 'Explorer'},
+          {'name': 'Wanderer', 'emoji': '🗺️', 'range': '500–1999', 'isActive': _tier == 'Wanderer'},
+          {'name': 'Nomad', 'emoji': '⛺', 'range': '2000–4999', 'isActive': _tier == 'Nomad'},
+          {'name': 'Pathfinder', 'emoji': '🏔️', 'range': '5000+', 'isActive': _tier == 'Pathfinder'},
+        ];
+        _offers = [
+          {'emoji': '💰', 'label': '₹50 Cashback', 'cost': '⭐ 500 TP'},
+          {'emoji': '🚀', 'label': 'Profile Boost 7d', 'cost': '⭐ 300 TP'},
+          {'emoji': '🏅', 'label': 'Verified Badge', 'cost': '⭐ 1000 TP'},
+          {'emoji': '👥', 'label': 'Free Group Join', 'cost': '⭐ 750 TP'},
+        ];
+      });
     }
-    _loadAll();
   }
 
-  Future<void> _reject(String id) async { await ApiService.rejectMatchRequest(id, _userId!); _loadAll(); }
-
-  Color _c(int i) {
-    final cs = [context.colors.green, context.colors.sky, context.colors.amber, context.colors.rose, ZussGoTheme.lavender];
-    return cs[i % cs.length];
-  }
-
-  List<Map<String, dynamic>> get _filteredMatches {
-    if (_searchQ.isEmpty) return _matches;
-    final q = _searchQ.toLowerCase();
-    return _matches.where((m) {
-      final n = (m['otherUser']?['fullName'] ?? '').toString().toLowerCase();
-      return n.contains(q);
-    }).toList();
+  String _formatBalance(int b) {
+    if (b >= 1000) {
+      return '${b ~/ 1000},${(b % 1000).toString().padLeft(3, '0')}';
+    }
+    return b.toString();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark    = Theme.of(context).brightness == Brightness.dark;
-    final bgPage    = ZussGoTheme.scaffoldBg(context);
-    final bgCard    = ZussGoTheme.cardBg(context);
-    final bgMuted   = ZussGoTheme.mutedBg(context);
-    final borderCol = ZussGoTheme.border(context);
-    final textPri   = ZussGoTheme.primaryText(context);
-    final textMut   = ZussGoTheme.mutedText(context);
-    final textSec   = ZussGoTheme.secondaryText(context);
+    final c = context.colors;
+    final progressFraction = _balance / 5000;
 
     return Scaffold(
-      backgroundColor: bgPage,
-      body: Stack(fit: StackFit.expand, children: [
-
-        SafeArea(bottom: false, child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 90),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-            // ── HEADER ──
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Connections', style: context.textTheme.displayLarge!.copyWith(fontSize: 28, color: textPri, fontWeight: FontWeight.w800)),
-              GestureDetector(
-                onTap: () => context.push('/chats'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: bgMuted,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: borderCol),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.chat_bubble_outline_rounded, color: textPri, size: 16),
-                    const SizedBox(width: 6),
-                    Text('Chats', style: TextStyle(color: textPri, fontWeight: FontWeight.w600, fontSize: 13)),
-                    if (context.watch<NotificationService>().unreadMessageCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: context.colors.green, borderRadius: BorderRadius.circular(10)),
-                        child: Text('${context.watch<NotificationService>().unreadMessageCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    ]
-                  ]),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 18),
-
-            // ── SEARCH BAR ──
-            TextField(
-              controller: _searchC,
-              style: context.textTheme.bodyMedium!.copyWith(color: textPri),
-              decoration: InputDecoration(
-                hintText: 'Search connections...',
-                hintStyle: context.textTheme.bodyMedium!.copyWith(color: textMut),
-                prefixIcon: Icon(Icons.search_rounded, color: textMut, size: 20),
-                suffixIcon: _searchQ.isNotEmpty ? IconButton(icon: Icon(Icons.close_rounded, size: 18, color: textMut), onPressed: () { _searchC.clear(); setState(() => _searchQ = ''); }) : null,
-                filled: true,
-                fillColor: bgMuted,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: context.colors.green.withValues(alpha: 0.4))),
-              ),
-              onChanged: (v) => setState(() => _searchQ = v),
-            ),
-            const SizedBox(height: 20),
-
-            if (_loading)
-              Padding(padding: const EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green))),
-
-            // ── EMPTY STATE ──
-            if (!_loading && _pending.isEmpty && _sent.isEmpty && _matches.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: bgCard,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : null,
-                  boxShadow: [
-                    if (Theme.of(context).brightness == Brightness.light)
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Column(children: [
-                  Icon(Icons.people_outline_rounded, size: 48, color: textMut.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  Text('No connections yet', style: context.textTheme.displaySmall!.copyWith(color: textPri, fontSize: 18)),
-                  const SizedBox(height: 8),
-                  Text('Plan a new trip to start discovering and connecting with matching companions.', 
-                       style: context.textTheme.bodyMedium!.copyWith(color: textSec, height: 1.4), textAlign: TextAlign.center),
-                ]),
-              ),
-
-            // ── PENDING REQUESTS ──
-            if (!_loading && _pending.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 12, top: 8),
-                child: Text('REQUESTS', style: TextStyle(fontSize: 11, color: textSec, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
-              ),
-              ...List.generate(_pending.length, (i) {
-                final req = _pending[i];
-                final s = req['sender'] ?? {};
-                final d = req['trip']?['destination'] ?? {};
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: bgCard,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : null,
-                    boxShadow: [
-                      if (Theme.of(context).brightness == Brightness.light)
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Container(
-                        width: 48, height: 48,
-                        decoration: BoxDecoration(color: _c(i).withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(16)),
-                        alignment: Alignment.center,
-                        child: Text((s['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _c(i), fontFamily: 'Playfair Display')),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(s['fullName'] ?? '', style: context.textTheme.labelLarge!.copyWith(color: textPri, fontSize: 15)),
-                        const SizedBox(height: 2),
-                        Text('${d['name'] ?? 'Trip'} • ${s['travelStyle'] ?? 'Explorer'}', style: context.textTheme.bodySmall!.copyWith(color: textSec, fontSize: 12)),
-                      ])),
-                    ]),
-                    if (req['message'] != null && req['message'].toString().trim().isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(top: 14, bottom: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(12)),
-                        child: Text('"${req['message']}"', style: context.textTheme.bodyMedium!.copyWith(fontStyle: FontStyle.italic, color: textPri, height: 1.4)),
-                      ),
-                    const SizedBox(height: 16),
-                    Row(children: [
-                      Expanded(child: GestureDetector(
-                        onTap: () => _reject(req['id']),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(color: bgPage, border: Border.all(color: borderCol), borderRadius: BorderRadius.circular(14)),
-                          alignment: Alignment.center,
-                          child: Text('Decline', style: context.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: textSec, fontSize: 13)),
-                        ),
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(flex: 2, child: GestureDetector(
-                        onTap: () => _accept(req['id']),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(color: textPri, borderRadius: BorderRadius.circular(14)),
-                          alignment: Alignment.center,
-                          child: Text("Accept", style: TextStyle(color: bgPage, fontWeight: FontWeight.w700, fontSize: 13)),
-                        ),
-                      )),
-                    ]),
-                  ]),
-                );
-              }),
-              const SizedBox(height: 16),
-            ],
-
-            // ── SENT REQUESTS ──
-            if (!_loading && _sent.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 12, top: 4),
-                child: Text('SENT REQUESTS', style: TextStyle(fontSize: 11, color: textSec, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
-              ),
-              ...List.generate(_sent.length, (i) {
-                final req = _sent[i];
-                final r = req['receiver'] ?? {};
-                final d = req['trip']?['destination'] ?? {};
-                final st = req['status'] ?? 'PENDING';
-                final isPending = st == 'PENDING';
-                final sc = st == 'ACCEPTED' ? context.colors.green : st == 'REJECTED' ? context.colors.rose : textSec;
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: bgMuted.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : null,
-                  ),
-                  child: Row(children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(color: borderCol.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(14)),
-                      alignment: Alignment.center,
-                      child: Text((r['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textPri, fontFamily: 'Playfair Display')),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(r['fullName'] ?? '', style: context.textTheme.labelLarge!.copyWith(fontSize: 14, color: textPri)),
-                      const SizedBox(height: 2),
-                      Text('${d['name'] ?? ''}', style: context.textTheme.bodySmall!.copyWith(color: textSec, fontSize: 12)),
-                    ])),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(color: sc.withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(10)),
-                      child: Text(isPending ? 'Pending' : st == 'ACCEPTED' ? 'Accepted' : 'Declined', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: sc)),
-                    ),
-                  ]),
-                );
-              }),
-              const SizedBox(height: 16),
-            ],
-
-            // ── MATCHED ──
-            if (!_loading && (_matches.isNotEmpty || _searchQ.isNotEmpty)) ...[
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 12, top: 4),
-                child: Text('CONNECTIONS', style: TextStyle(fontSize: 11, color: textPri, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
-              ),
-              if (_filteredMatches.isEmpty && _searchQ.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  child: Column(
-                    children: [
-                      Icon(Icons.search_off_rounded, size: 40, color: textMut.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No matches for "$_searchQ"', style: context.textTheme.bodyMedium!.copyWith(color: textMut)),
-                    ],
-                  ),
-                )
-              else
-                ...List.generate(_filteredMatches.length, (i) {
-                  final m = _filteredMatches[i];
-                  final o = m['otherUser'] ?? {};
-                  final d = m['trip']?['destination'] ?? {};
-                  final cv = m['conversation'];
-                  final unreadCount = (m['unreadCount'] as num?)?.toInt() ?? 0;
-                  
-                  return GestureDetector(
-                    onTap: () async { 
-                      if (cv?['id'] != null) {
-                        await context.push('/chat/${cv['id']}'); 
-                        _loadAll(); 
-                      } 
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: borderCol) : Border.all(color: borderCol.withValues(alpha: 0.5)),
-                        boxShadow: [
-                          if (Theme.of(context).brightness == Brightness.light)
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Row(children: [
-                        Container(
-                          width: 48, height: 48,
-                          decoration: BoxDecoration(color: _c(i).withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(16)),
-                          alignment: Alignment.center,
-                          child: Text((o['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _c(i), fontFamily: 'Playfair Display')),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(o['fullName'] ?? '', style: context.textTheme.labelLarge!.copyWith(color: unreadCount > 0 ? context.colors.green : textPri, fontSize: 15, fontWeight: unreadCount > 0 ? FontWeight.w800 : null)),
+      backgroundColor: c.bg,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: _loading
+                ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: c.primary))
+                : SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── TOP BAR ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('REWARDS', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 1)),
                           const SizedBox(height: 4),
-                          if (cv?['lastMessage'] != null)
-                            Text(cv['lastMessage'], style: context.textTheme.bodyMedium!.copyWith(
-                              color: unreadCount > 0 ? textPri : textMut, 
-                              fontWeight: unreadCount > 0 ? FontWeight.w800 : null,
-                              fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)
-                          else
-                            Text('Connected for ${d['name'] ?? 'trip'}', style: context.textTheme.bodySmall!.copyWith(color: textSec, fontSize: 12)),
-                        ])),
-                        const SizedBox(width: 10),
-                        if (unreadCount > 0)
-                          Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: context.colors.green, shape: BoxShape.circle),
-                            alignment: Alignment.center,
-                            child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-                          ),
+                          RichText(text: TextSpan(style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: c.text), children: [
+                            const TextSpan(text: 'Trek '),
+                            TextSpan(text: 'Points', style: TextStyle(color: c.gold)),
+                          ])),
+                        ]),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(color: unreadCount > 0 ? context.colors.green : bgPage, border: unreadCount > 0 ? null : Border.all(color: borderCol), borderRadius: BorderRadius.circular(12)),
-                          child: Text('Message', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: unreadCount > 0 ? Colors.white : textPri)),
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: c.border)),
+                          child: Stack(alignment: Alignment.center, children: [
+                            const Text('🔔', style: TextStyle(fontSize: 18)),
+                            Positioned(top: 6, right: 6, child: Container(width: 8, height: 8, decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle, border: Border.all(color: c.surface, width: 2)))),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── HERO CARD ──
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      gradient: const LinearGradient(colors: [Color(0xFF2A1810), Color(0xFF1E1420), Color(0xFF14182A)]),
+                      border: Border.all(color: c.borderWarm),
+                    ),
+                    child: Stack(children: [
+                      Positioned(top: -40, right: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [const Color(0x15FFBD3D), Colors.transparent])))),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        // Tier badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(color: c.goldSoft, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.goldMid)),
+                          child: Text('$_tierEmoji $_tier Tier', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: c.gold)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('YOUR BALANCE', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: c.textSecondary)),
+                        const SizedBox(height: 4),
+                        Text(_formatBalance(_balance), style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.w900, color: c.gold, height: 1, letterSpacing: -2)),
+                        const SizedBox(height: 6),
+                        RichText(text: TextSpan(style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.textSecondary), children: [
+                          const TextSpan(text: '≈ '),
+                          TextSpan(text: '₹$_cashbackValue cashback', style: TextStyle(color: c.primary, fontWeight: FontWeight.w700)),
+                          const TextSpan(text: ' value'),
+                        ])),
+                        const SizedBox(height: 18),
+                        // Progress
+                        if (_nextTier != null) ...[
+                          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                            Text('$_tier $_tierEmoji', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: c.textSecondary)),
+                            Text('${_nextTier!['pointsNeeded']} to ${_nextTier!['name']} ${_nextTier!['emoji']}', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: c.gold, fontWeight: FontWeight.w600)),
+                          ]),
+                          const SizedBox(height: 7),
+                        ],
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: SizedBox(height: 6, child: Stack(children: [
+                            Container(color: const Color(0xFF2A2520)),
+                            FractionallySizedBox(widthFactor: progressFraction.clamp(0, 1).toDouble(), child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(99), gradient: LinearGradient(colors: [c.primary, c.gold])))),
+                          ])),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(14)),
+                          child: Center(child: Text('Redeem Points →', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white))),
                         ),
                       ]),
+                    ]),
+                  ),
+
+                  // ── TIERS ──
+                  _sectionHeader('Your Journey', 'All Tiers →'),
+                  SizedBox(
+                    height: 110,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _tiers.length,
+                      itemBuilder: (_, i) {
+                        final t = _tiers[i];
+                        final isActive = t['isActive'] == true;
+                        return Container(
+                          width: 100, margin: const EdgeInsets.only(right: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: isActive ? null : c.card,
+                            gradient: isActive ? const LinearGradient(colors: [Color(0xFF1E1510), Color(0xFF1A1420)]) : null,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: isActive ? c.primary : c.border),
+                          ),
+                          child: Stack(clipBehavior: Clip.none, children: [
+                            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                              Text(t['emoji'] ?? '🌱', style: const TextStyle(fontSize: 26)),
+                              const SizedBox(height: 6),
+                              Text(t['name'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: isActive ? c.primary : c.text)),
+                              Text(t['range'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: c.muted)),
+                            ]),
+                            if (isActive) Positioned(top: -10, right: -10, child: Container(width: 18, height: 18, decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle), child: const Center(child: Text('✓', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white))))),
+                          ]),
+                        );
+                      },
                     ),
-                  );
-                }),
-            ],
+                  ),
 
-          ]),
-        )),
+                  // ── OFFERS ──
+                  _sectionHeader('Redeem', 'Browse All'),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _offers.length,
+                      itemBuilder: (_, i) {
+                        final o = _offers[i];
+                        return Container(
+                          width: 150, margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: c.border)),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                            Text(o['emoji'] ?? '💰', style: const TextStyle(fontSize: 26)),
+                            const SizedBox(height: 8),
+                            Text(o['label'] ?? o['title'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: c.text)),
+                            Text(o['cost'] ?? '⭐ ${o['points'] ?? 0} TP', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w800, color: c.gold)),
+                          ]),
+                        );
+                      },
+                    ),
+                  ),
 
-        const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 2)),
+                  // ── ACTIVITY ──
+                  _sectionHeader('Recent Activity', 'View All'),
+                  if (_activity.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border)),
+                        child: Center(child: Text('No activity yet — start traveling!', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.muted))),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: _activity.map((a) {
+                          final isEarn = a['isEarn'] == true || (a['amount'] is int && a['amount'] > 0);
+                          final amt = a['amount'] is int ? (a['amount'] > 0 ? '+${a['amount']}' : '${a['amount']}') : (a['points'] ?? '');
+                          final typeEmojis = {'TRIP_COMPLETED': '🏕️', 'COMPANION_MATCHED': '🤝', 'SIGNUP_BONUS': '🎉', 'CASHBACK_REDEEMED': '💸', 'RATING_GIVEN': '⭐'};
+                          final emoji = typeEmojis[a['type']] ?? (isEarn ? '⭐' : '💸');
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+                            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border)),
+                            child: Row(children: [
+                              Container(width: 38, height: 38, decoration: BoxDecoration(color: isEarn ? c.sageSoft : c.roseSoft, borderRadius: BorderRadius.circular(12)), alignment: Alignment.center, child: Text(emoji, style: const TextStyle(fontSize: 17))),
+                              const SizedBox(width: 12),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(a['description'] ?? a['title'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: c.text)),
+                                const SizedBox(height: 2),
+                                Text(_formatTime(a['createdAt']), style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.muted)),
+                              ])),
+                              Text(amt.toString(), style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: isEarn ? c.sage : c.rose)),
+                            ]),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+          const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 2)),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(dynamic t) {
+    if (t == null) return '';
+    final dt = DateTime.tryParse(t.toString());
+    if (dt == null) return t.toString();
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  Widget _sectionHeader(String title, String link) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(title, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700, color: c.text)),
+        Text(link, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.primary)),
       ]),
     );
   }

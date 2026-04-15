@@ -7,6 +7,7 @@ import '../screens/auth/verify_otp_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/auth/profile_setup_screen.dart';
+import '../screens/auth/founder_access_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/home/see_all_travelers_screen.dart';
 import '../screens/home/see_all_events_screen.dart';
@@ -18,6 +19,7 @@ import '../screens/matches/traveler_profile_screen.dart';
 import '../screens/chat/chat_list_screen.dart';
 import '../screens/chat/chat_screen.dart';
 import '../screens/trips/my_trips_screen.dart';
+import '../screens/trips/trip_detail_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/edit_profile/edit_profile_screen.dart';
 import '../screens/settings/notifications/notifications_screen.dart';
@@ -50,6 +52,7 @@ final GoRouter router = GoRouter(
       return ResetPasswordScreen(email: e['email'] ?? '');
     }),
     GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupScreen()),
+    GoRoute(path: '/founder-access', builder: (context, state) => const FounderAccessScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/see-all-travelers', builder: (context, state) => const SeeAllTravelersScreen()),
     GoRoute(path: '/see-all-events', builder: (context, state) => const SeeAllEventsScreen()),
@@ -61,6 +64,17 @@ final GoRouter router = GoRouter(
       ),
     ),
     GoRoute(path: '/matches', builder: (context, state) => const MatchesScreen()),
+    GoRoute(
+      path: '/browse/:slug',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>? ?? {};
+        return BrowseTravelersScreen(
+          destinationSlug: state.pathParameters['slug'] ?? '',
+          destinationName: extra['name'] ?? '',
+          destinationId: extra['destinationId'],
+        );
+      },
+    ),
     GoRoute(
       path: '/traveler/:id',
       builder: (context, state) => TravelerProfileScreen(
@@ -75,6 +89,19 @@ final GoRouter router = GoRouter(
       ),
     ),
     GoRoute(path: '/trips', builder: (context, state) => const MyTripsScreen()),
+    GoRoute(
+      path: '/trip/:id',
+      builder: (context, state) => TripDetailScreen(
+        tripId: state.pathParameters['id'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/group/:id',
+      builder: (context, state) => TripDetailScreen(
+        tripId: state.pathParameters['id'] ?? '',
+        isGroup: true,
+      ),
+    ),
 
     // ── Settings ──────────────────────────────────────────────────────────────
     GoRoute(path: '/settings',              builder: (context, state) => const SettingsScreen()),

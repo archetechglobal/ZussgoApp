@@ -10,6 +10,7 @@ class ApiConfig {
     } else {
       return "http://localhost:8000";
     }
+    //"http://3.108.184.61:8000";
   }
 
   // Auth
@@ -61,4 +62,22 @@ class ApiConfig {
 
   // Reports
   static String get reports => "$baseUrl/reports";
+
+  // Safety & SOS
+  static String get safetyContacts => "$baseUrl/safety/contacts";
+  static String safetyDeleteContact(String id) => "$baseUrl/safety/contacts/$id";
+  static String get safetyStartTrip => "$baseUrl/safety/start";
+  static String get safetyActiveTrip => "$baseUrl/safety/active";
+  static String safetyCompleteTrip(String id) => "$baseUrl/safety/$id/complete";
+  static String safetySOS(String id) => "$baseUrl/safety/$id/sos";
+  static String safetyUpdateLocation(String id) => "$baseUrl/safety/$id/location";
+
+  // Rewards / Trek Points
+  static String get rewards => "$baseUrl/rewards";
+  static String get rewardsBalance => "$baseUrl/rewards/balance";
+  static String get rewardsHistory => "$baseUrl/rewards/history";
+  static String get rewardsEarn => "$baseUrl/rewards/earn";
+  static String get rewardsEarnAction => "$baseUrl/rewards/earn-action";
+  static String get rewardsRedeem => "$baseUrl/rewards/redeem";
+  static String get rewardsInitialize => "$baseUrl/rewards/initialize";
 }
