@@ -1,120 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../config/theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
-
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  bool _newMatches    = true;
-  bool _messages      = true;
-  bool _tripUpdates   = true;
-  bool _travelAlerts  = false;
-  bool _promoOffers   = false;
-  bool _weeklySummary = true;
-  bool _pushEnabled   = true;
-  bool _emailEnabled  = false;
+  // Mock notifications matching V3 design
+  final List<_NotifData> _today = [
+    _NotifData('🤝', 'Arjun Sharma', ' sent you a companion request for ', 'Spiti Valley', '10 minutes ago', true, 'primary'),
+    _NotifData('⭐', '', 'You earned ', '+100 TP', ' for completing the Rishikesh trip!', true, 'gold'),
+  ];
 
-  Widget _sectionLabel(String title) => Padding(
-    padding: const EdgeInsets.only(top: 28, bottom: 10),
-    child: Text(title.toUpperCase(), style: ZussGoTheme.bodySmall.copyWith(
-      color: ZussGoTheme.textMuted, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
-  );
+  final List<_NotifData> _earlier = [
+    _NotifData('💬', 'Priya Nair', ' sent you a message', '', 'Yesterday', false, 'lavender'),
+    _NotifData('🗺️', '', 'New trip posted near your interests: ', 'Kasol–Kheerganga', 'Yesterday', false, 'sage'),
+    _NotifData('🔥', 'Goa', ' is trending! 112 travelers are looking for companions', '', '2 days ago', false, 'rose'),
+  ];
 
-  Widget _toggle({required IconData icon, required String label, required String sub,
-    required bool value, required ValueChanged<bool> onChanged}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ZussGoTheme.borderDefault))),
-      child: Row(
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Column(
         children: [
-          Container(width: 38, height: 38,
-            decoration: BoxDecoration(color: ZussGoTheme.bgSecondary, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, size: 20, color: ZussGoTheme.textSecondary)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: ZussGoTheme.labelBold.copyWith(fontSize: 14)),
-            Text(sub, style: ZussGoTheme.bodySmall),
-          ])),
-          Switch.adaptive(
-            value: value, onChanged: onChanged,
-            activeColor: ZussGoTheme.rose,
-            activeTrackColor: ZussGoTheme.rose.withValues(alpha: 0.25),
-            inactiveThumbColor: ZussGoTheme.textMuted,
-            inactiveTrackColor: ZussGoTheme.bgSecondary,
+          // Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 16),
+            child: Row(children: [
+              GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(13), border: Border.all(color: c.border)),
+                  child: Icon(Icons.arrow_back_rounded, color: c.text, size: 16),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('Notifications', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: c.text)),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => setState(() {
+                  for (var n in _today) n.unread = false;
+                }),
+                child: Text('Mark all read', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: c.primary)),
+              ),
+            ]),
+          ),
+
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Today
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                    child: Text('TODAY', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: c.muted, letterSpacing: 1)),
+                  ),
+                  ..._today.map((n) => _NotifItem(data: n)),
+
+                  // Earlier
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                    child: Text('EARLIER', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: c.muted, letterSpacing: 1)),
+                  ),
+                  ..._earlier.map((n) => _NotifItem(data: n)),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+class _NotifData {
+  final String emoji;
+  final String bold1;
+  final String text1;
+  final String bold2;
+  final String time;
+  bool unread;
+  final String colorType; // primary, gold, lavender, sage, rose
+
+  _NotifData(this.emoji, this.bold1, this.text1, this.bold2, this.time, this.unread, this.colorType);
+}
+
+class _NotifItem extends StatelessWidget {
+  final _NotifData data;
+  const _NotifItem({required this.data});
+
+  Color _bgColor(ZussGoColors c) {
+    switch (data.colorType) {
+      case 'primary': return c.primarySoft;
+      case 'gold': return c.goldSoft;
+      case 'lavender': return c.lavenderSoft;
+      case 'sage': return c.sageSoft;
+      case 'rose': return c.roseSoft;
+      default: return c.primarySoft;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-              child: Row(children: [
-                GestureDetector(onTap: () => context.pop(), child: const Icon(Icons.arrow_back_rounded, color: ZussGoTheme.textSecondary)),
-                const SizedBox(width: 16),
-                Text('Notifications', style: ZussGoTheme.displaySmall.copyWith(fontSize: 18)),
-              ]),
+    final c = context.colors;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Unread indicator
+          if (data.unread)
+            Container(
+              width: 3, height: 48,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(2)),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionLabel('Delivery'),
-                    _toggle(icon: Icons.notifications_active_rounded, label: 'Push Notifications', sub: 'Alerts on your device', value: _pushEnabled, onChanged: (v) => setState(() => _pushEnabled = v)),
-                    _toggle(icon: Icons.email_rounded, label: 'Email Notifications', sub: 'Updates to your inbox', value: _emailEnabled, onChanged: (v) => setState(() => _emailEnabled = v)),
 
-                    _sectionLabel('Matching'),
-                    _toggle(icon: Icons.favorite_rounded, label: 'New Matches', sub: 'When someone matches with you', value: _newMatches, onChanged: (v) => setState(() => _newMatches = v)),
-                    _toggle(icon: Icons.chat_bubble_rounded, label: 'Messages', sub: 'New messages from matches', value: _messages, onChanged: (v) => setState(() => _messages = v)),
+          // Icon
+          Container(
+            width: 38, height: 38,
+            decoration: BoxDecoration(color: _bgColor(c), borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: Text(data.emoji, style: const TextStyle(fontSize: 18)),
+          ),
+          const SizedBox(width: 12),
 
-                    _sectionLabel('Trips'),
-                    _toggle(icon: Icons.flight_takeoff_rounded, label: 'Trip Updates', sub: 'Changes to your trips', value: _tripUpdates, onChanged: (v) => setState(() => _tripUpdates = v)),
-                    _toggle(icon: Icons.travel_explore_rounded, label: 'Travel Alerts', sub: 'Deals and destination tips', value: _travelAlerts, onChanged: (v) => setState(() => _travelAlerts = v)),
-
-                    _sectionLabel('General'),
-                    _toggle(icon: Icons.summarize_rounded, label: 'Weekly Summary', sub: 'Your week in ZussGo', value: _weeklySummary, onChanged: (v) => setState(() => _weeklySummary = v)),
-                    _toggle(icon: Icons.local_offer_rounded, label: 'Promotions & Offers', sub: 'Deals and special offers', value: _promoOffers, onChanged: (v) => setState(() => _promoOffers = v)),
-
-                    const SizedBox(height: 28),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: const Text('Notification preferences saved!'),
-                            backgroundColor: ZussGoTheme.rose,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ));
-                          context.pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ZussGoTheme.rose,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: const Text('Save Preferences', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                      ),
-                    ),
-                  ],
+          // Text
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.textSecondary, height: 1.5),
+                    children: [
+                      if (data.bold1.isNotEmpty) TextSpan(text: data.bold1, style: TextStyle(color: c.text, fontWeight: FontWeight.w700)),
+                      TextSpan(text: data.text1),
+                      if (data.bold2.isNotEmpty) TextSpan(text: data.bold2, style: TextStyle(color: c.text, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 3),
+                Text(data.time, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.muted)),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

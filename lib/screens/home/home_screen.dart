@@ -1,18 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
-import '../../services/destination_data.dart';
-import '../../services/destination_images.dart';
-import '../../widgets/destination_image.dart';
-import 'package:provider/provider.dart';
-import '../../services/theme_service.dart';
-import '../../services/weather_service.dart';
-import 'post_status_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,66 +16,35 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _userName = '';
+  String? _profilePhoto;
   List<Map<String, dynamic>> _destinations = [];
   List<Map<String, dynamic>> _travelers = [];
-  List<Map<String, dynamic>> _events = [];
-  Map<String, Map<String, dynamic>> _weatherData = {};
-  List<Map<String, dynamic>> _peakDestinations = [];
-  int _currentPeakIndex = 0;
-  Timer? _peakTimer;
+  List<Map<String, dynamic>> _pendingRequests = [];
   bool _isLoading = true;
-  String _selectedCat = 'All';
-  final _cats = ['All', 'Beach', 'Mountain', 'Spiritual', 'Culture', 'Adventure'];
 
   @override
-  void initState() {
-    super.initState();
-    _loadAll();
-    _connectWs();
-  }
-
-  @override
-  void dispose() {
-    _peakTimer?.cancel();
-    super.dispose();
-  }
+  void initState() { super.initState(); _loadAll(); _connectWs(); }
 
   Future<void> _loadAll() async {
     final user = await AuthService.getSavedUser();
-    if (user != null) _userName = user['fullName'] ?? 'Traveler';
+    if (user != null) {
+      _userName = user['fullName'] ?? 'Traveler';
+      _profilePhoto = user['profilePhotoUrl'];
+    }
     final destR = await ApiService.getDestinations();
     final userId = user?['userId'];
     Map<String, dynamic>? travR;
-    if (userId != null) travR = await AuthService.getUsers(userId: userId);
-    final eventsR = await DestinationData.getUpcomingEvents();
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        if (destR['success'] == true) _destinations = List<Map<String, dynamic>>.from(destR['data'] ?? []);
-        if (travR != null && travR['success'] == true) _travelers = List<Map<String, dynamic>>.from(travR['data'] ?? []);
-        _events = eventsR;
-        final peakSlugs = DestinationData.getPeakDestinations();
-        _peakDestinations = _destinations.where((d) => peakSlugs.contains(d['slug']?.toString() ?? '')).toList();
-      });
-      _startPeakRotation();
-      _loadWeather();
+    if (userId != null) {
+      travR = await AuthService.getUsers(userId: userId);
+      // Load pending companion requests
+      final reqR = await ApiService.getPendingRequests(userId);
+      if (reqR['success'] == true) _pendingRequests = List<Map<String, dynamic>>.from(reqR['data'] ?? []);
     }
-  }
-
-  void _startPeakRotation() {
-    _peakTimer?.cancel();
-    if (_peakDestinations.length <= 1) return;
-    _peakTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted) setState(() => _currentPeakIndex = (_currentPeakIndex + 1) % _peakDestinations.length);
+    if (mounted) setState(() {
+      _isLoading = false;
+      if (destR['success'] == true) _destinations = List<Map<String, dynamic>>.from(destR['data'] ?? []);
+      if (travR != null && travR['success'] == true) _travelers = List<Map<String, dynamic>>.from(travR['data'] ?? []);
     });
-  }
-
-  Future<void> _loadWeather() async {
-    final slugs = _destinations.map((d) => d['slug']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
-    if (slugs.isEmpty) return;
-    final toFetch = slugs.length > 6 ? slugs.sublist(0, 6) : slugs;
-    final weather = await WeatherService.getWeatherBatch(toFetch);
-    if (mounted) setState(() => _weatherData = weather);
   }
 
   Future<void> _connectWs() async {
@@ -89,568 +52,343 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user?['userId'] != null) ChatService.connect(user!['userId']);
   }
 
-  String get _firstName => _userName.split(' ').first;
+  Future<void> _acceptRequest(String requestId) async {
+    final user = await AuthService.getSavedUser();
+    if (user?['userId'] == null) return;
+    final r = await ApiService.acceptMatchRequest(requestId, user!['userId']);
+    if (r['success'] == true) _loadAll();
+  }
 
+  String get _firstName => _userName.split(' ').first;
   String get _greeting {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
-  String _getCat(String? name) {
-    const beach = ['Goa', 'Andaman', 'Gokarna', 'Pondicherry'];
-    const mount = ['Manali', 'Ladakh', 'Spiti Valley', 'Shimla', 'Kasol', 'Dharamshala', 'Munnar', 'Coorg', 'Darjeeling'];
-    const culture = ['Jaipur', 'Varanasi', 'Udaipur', 'Hampi', 'Pushkar'];
-    const spirit = ['Rishikesh'];
-    if (beach.contains(name)) return 'Beach';
-    if (mount.contains(name)) return 'Mountain';
-    if (culture.contains(name)) return 'Culture';
-    if (spirit.contains(name)) return 'Spiritual';
-    return 'Adventure';
-  }
-
-  List<Map<String, dynamic>> get _filtered =>
-      _selectedCat == 'All' ? _destinations : _destinations.where((d) => _getCat(d['name']) == _selectedCat).toList();
-
-  Color _tc(int i) {
-    final cs = [context.colors.green, context.colors.sky, context.colors.amber, context.colors.rose, ZussGoTheme.lavender];
-    return cs[i % cs.length];
+    if (h < 12) return 'Good morning ☀️';
+    if (h < 17) return 'Good afternoon 🌤️';
+    return 'Good evening 🌙';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgPage = ZussGoTheme.scaffoldBg(context);
-    final bgCard = ZussGoTheme.cardBg(context);
-    final bgMuted = ZussGoTheme.mutedBg(context);
-    final borderCol = ZussGoTheme.border(context);
-    final textPri = ZussGoTheme.primaryText(context);
-    final textMut = ZussGoTheme.mutedText(context);
-    final textSec = ZussGoTheme.secondaryText(context);
-
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: bgPage,
+      backgroundColor: c.bg,
       body: Stack(
         fit: StackFit.expand,
         children: [
           SafeArea(
             bottom: false,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 90),
+              padding: const EdgeInsets.only(bottom: 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── HEADER ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_greeting, style: context.textTheme.bodySmall!.copyWith(color: textMut)),
-                            Text('$_firstName', style: context.textTheme.displayMedium!.copyWith(color: textPri)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            _ModernThemeToggle(
-                              isDark: isDark,
-                              onToggle: () => context.read<ThemeService>().toggle(),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => context.push('/search'),
-                              child: Container(
-                                width: 38, height: 38,
-                                decoration: BoxDecoration(color: bgMuted, borderRadius: BorderRadius.circular(12)),
-                                child: Icon(Icons.search_rounded, color: textMut, size: 20),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => context.push('/settings'),
-                              child: Container(
-                                width: 38, height: 38,
-                                decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(12)),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  _firstName.isNotEmpty ? _firstName[0] : 'Z',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15, fontFamily: 'Playfair Display'),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ── CATEGORIES ──
                   Container(
-                    margin: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderCol, width: 1.5))),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: Row(
-                        children: _cats.map((c) {
-                          final active = c == _selectedCat;
-                          return GestureDetector(
-                            onTap: () => setState(() => _selectedCat = c),
-                            child: Container(
-                              padding: const EdgeInsets.only(bottom: 8, right: 20),
-                              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: active ? textPri : Colors.transparent, width: 1.5))),
-                              child: Text(c, style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w700 : FontWeight.w400, color: active ? textPri : textMut)),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-
-                  // ── HOT DESTINATIONS ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 8, 22, 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(children: [
-                          Text('Hot Destinations', style: context.textTheme.displaySmall!.copyWith(color: textPri)),
-                          const SizedBox(width: 4),
-                          Icon(Icons.local_fire_department_rounded, size: 16, color: context.colors.rose),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                    decoration: const BoxDecoration(gradient: RadialGradient(center: Alignment(0, -1), radius: 1.5, colors: [Color(0x08FF6B4A), Colors.transparent])),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(_greeting, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 2),
+                          RichText(text: TextSpan(style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: c.text), children: [
+                            const TextSpan(text: 'Hey, '),
+                            TextSpan(text: _firstName, style: TextStyle(color: c.primary)),
+                          ])),
                         ]),
                         GestureDetector(
-                          onTap: () => context.push('/search'),
-                          child: Text('See all', style: TextStyle(fontSize: 12, color: context.colors.green, fontWeight: FontWeight.w600)),
+                          onTap: () => context.go('/settings'),
+                          child: Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: LinearGradient(colors: [c.primary, const Color(0xFFFF8A65)]),
+                            ),
+                            clipBehavior: Clip.hardEdge,
+                            child: _profilePhoto != null
+                                ? Image.network(_profilePhoto!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Center(child: Text(_firstName.isNotEmpty ? _firstName[0] : 'Z', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white))))
+                                : Center(child: Text(_firstName.isNotEmpty ? _firstName[0] : 'Z', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white))),
+                          ),
                         ),
-                      ],
+                      ]),
+                      const SizedBox(height: 20),
+
+                      // Search bar
+                      GestureDetector(
+                        onTap: () => context.go('/search'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16)),
+                          child: Row(children: [
+                            Text('🔍', style: TextStyle(fontSize: 16, color: c.muted.withValues(alpha: 0.4))),
+                            const SizedBox(width: 10),
+                            Text('Where are you headed?', style: GoogleFonts.plusJakartaSans(fontSize: 14, color: c.muted)),
+                          ]),
+                        ),
+                      ),
+                    ]),
+                  ),
+
+                  // ── COMPANION REQUESTS ──
+                  if (_pendingRequests.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                      child: Row(children: [
+                        Container(width: 8, height: 8, decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
+                        const SizedBox(width: 8),
+                        Text('New Companion Requests', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700, color: c.text)),
+                        const Spacer(),
+                        Text('${_pendingRequests.length}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: c.primary)),
+                      ]),
                     ),
+                    SizedBox(
+                      height: 90,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        itemCount: _pendingRequests.length,
+                        itemBuilder: (_, i) {
+                          final req = _pendingRequests[i];
+                          final sender = req['sender'] ?? {};
+                          return Container(
+                            width: 280, margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: c.card,
+                              borderRadius: BorderRadius.circular(18),
+                              gradient: LinearGradient(colors: [c.primarySoft, c.card]),
+                            ),
+                            child: Row(children: [
+                              _UserAvatar(photoUrl: sender['profilePhotoUrl'], name: sender['fullName'] ?? 'User', size: 48),
+                              const SizedBox(width: 12),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                                Text(sender['fullName'] ?? 'Traveler', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: c.text)),
+                                Text('${sender['city'] ?? 'India'} · ${sender['travelStyle'] ?? ''}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.muted)),
+                              ])),
+                              GestureDetector(
+                                onTap: () => _acceptRequest(req['id']),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(10)),
+                                  child: Text('Accept', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                                ),
+                              ),
+                            ]),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  // ── COMPANIONS CAROUSEL (photo cards) ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 14),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('Companions', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700, color: c.text)),
+                      GestureDetector(
+                        onTap: () => context.push('/see-all-travelers'),
+                        child: Text('See All →', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.primary)),
+                      ),
+                    ]),
                   ),
 
                   if (_isLoading)
-                    SizedBox(height: 180, child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: context.colors.green))),
-
-                  if (!_isLoading)
-                    SizedBox(
-                      height: 195,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 22),
-                        itemCount: _filtered.length > 6 ? 6 : _filtered.length,
-                        itemBuilder: (_, i) {
-                          final d = _filtered[i];
-                          final slug = d['slug']?.toString() ?? '';
-                          final isPeak = DestinationData.isPeakNow(slug);
-                          final w = _weatherData[slug];
-                          final temp = w?['temp'] ?? '--';
-                          final wIcon = w?['icon'] ?? '🌤️';
-
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: GestureDetector(
-                              onTap: () => context.push('/destination/$slug'),
-                              child: Container(
-                                width: 150,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(22),
-                                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15), blurRadius: 12, offset: const Offset(0, 4))],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(22),
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      DestinationImage(
-                                        destination: d,
-                                        width: 150,
-                                        height: 195,
-                                        fit: BoxFit.cover,
-                                      ),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-                                            stops: const [0.3, 1.0],
-                                          ),
-                                        ),
-                                      ),
-                                      if (isPeak)
-                                        Positioned(
-                                          top: 8, left: 8,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                            decoration: BoxDecoration(color: const Color(0xE6E85D75), borderRadius: BorderRadius.circular(6)),
-                                            child: const Text('Peak', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.3)),
-                                          ),
-                                        ),
-                                      Positioned(
-                                        bottom: 0, left: 0, right: 0,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(10),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(d['name'] ?? '', style: const TextStyle(fontFamily: 'Playfair Display', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-                                              const SizedBox(height: 3),
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Container(width: 4, height: 4, decoration: BoxDecoration(color: context.colors.mint, shape: BoxShape.circle)),
-                                                        const SizedBox(width: 3),
-                                                        Text('${d['travelerCount'] ?? 0} going', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.9))),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                                                    child: Text('$temp°C $wIcon', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.9))),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                  // ── PEAK BANNER ──
-                  if (!_isLoading && _peakDestinations.isNotEmpty) _buildPeakBanner(isDark: isDark, bgMuted: bgMuted),
-
-                  // ── PEOPLE HEADING OUT ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('People Heading Out', style: context.textTheme.displaySmall!.copyWith(color: textPri)),
-                        GestureDetector(
-                          onTap: () => context.push('/see-all-travelers'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(8)),
-                            child: Text('See all →', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: context.colors.green)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    SizedBox(height: 220, child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: c.primary))),
 
                   if (!_isLoading && _travelers.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Container(
-                        width: double.infinity, padding: const EdgeInsets.all(24),
-                        decoration: ZussGoTheme.cardDecoration(context),
-                        child: Column(children: [
-                          Icon(Icons.travel_explore_rounded, size: 38, color: textMut.withValues(alpha: 0.4)),
+                        height: 200, width: double.infinity,
+                        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(24)),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          const Text('🗺️', style: TextStyle(fontSize: 40)),
                           const SizedBox(height: 10),
-                          Text('No travelers yet', style: context.textTheme.displaySmall!.copyWith(color: textPri)),
+                          Text('No companions yet', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: c.text)),
                           const SizedBox(height: 4),
-                          Text('Be the first! Plan a trip.', style: context.textTheme.bodySmall!.copyWith(color: textMut), textAlign: TextAlign.center),
+                          Text('Explore destinations to find travelers', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: c.muted)),
                         ]),
                       ),
                     ),
 
+                  // Photo carousel cards
                   if (!_isLoading && _travelers.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: Column(
-                        children: List.generate(_travelers.length > 3 ? 3 : _travelers.length, (i) {
+                    SizedBox(
+                      height: 260,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        itemCount: _travelers.length > 8 ? 8 : _travelers.length,
+                        itemBuilder: (_, i) {
                           final t = _travelers[i];
+                          final name = t['fullName'] ?? 'Traveler';
+                          final age = t['age']?.toString() ?? '';
+                          final city = t['city'] ?? 'India';
+                          final style = t['travelStyle'] ?? 'Explorer';
+                          final photo = t['profilePhotoUrl'];
+                          final matchScore = 94 - (i * 4);
+
                           return GestureDetector(
                             onTap: () => context.push('/traveler/${t['id'] ?? ''}'),
                             child: Container(
-                              padding: const EdgeInsets.all(10),
-                              margin: const EdgeInsets.only(bottom: 6),
-                              decoration: ZussGoTheme.glassCardDecoration(context),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 40, height: 40,
-                                    decoration: BoxDecoration(color: _tc(i).withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(12)),
-                                    alignment: Alignment.center,
-                                    child: Text((t['fullName'] ?? 'U')[0], style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _tc(i), fontFamily: 'Playfair Display')),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(t['fullName'] ?? 'Unknown', style: context.textTheme.labelLarge!.copyWith(fontSize: 13, color: textPri)),
-                                        Text('${t['city'] ?? 'Explorer'} • ${t['travelStyle'] ?? 'Adventurer'}', style: context.textTheme.bodySmall!.copyWith(color: textMut)),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(8)),
-                                    child: Text('View', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: context.colors.green)),
-                                  ),
-                                ],
+                              width: 170, margin: const EdgeInsets.only(right: 14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(22),
+                                color: c.card,
                               ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-
-                  // ── EVENTS ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Events & Festivals', style: context.textTheme.displaySmall!.copyWith(color: textPri)),
-                        GestureDetector(
-                          onTap: () => context.push('/see-all-events'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(8)),
-                            child: Text('See all →', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: context.colors.green)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  if (_events.isEmpty && !_isLoading)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: ZussGoTheme.glassCardDecoration(context),
-                        child: Center(child: Text('No upcoming events', style: context.textTheme.bodySmall!.copyWith(color: textMut))),
-                      ),
-                    ),
-
-                  if (_events.isNotEmpty)
-                    SizedBox(
-                      height: 80,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 22),
-                        itemCount: _events.length > 5 ? 5 : _events.length,
-                        itemBuilder: (_, i) {
-                          final e = _events[i];
-                          return Container(
-                            width: 165,
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: bgCard,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: borderCol),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(children: [
-                                  Container(
-                                    width: 28, height: 28,
-                                    decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: isDark ? 0.2 : 0.08), borderRadius: BorderRadius.circular(8)),
-                                    alignment: Alignment.center,
-                                    child: Icon(Icons.celebration_rounded, size: 14, color: context.colors.rose),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(e['name'] ?? '', style: context.textTheme.labelLarge!.copyWith(fontSize: 11, color: textPri), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      Text('${e['destination'] ?? ''} • ${e['dates'] ?? ''}', style: context.textTheme.bodySmall!.copyWith(fontSize: 9, color: textMut), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    ]),
-                                  ),
-                                ]),
-                              ],
+                              clipBehavior: Clip.hardEdge,
+                              child: Stack(children: [
+                                // Photo area (60-70% of card)
+                                Positioned.fill(
+                                  child: photo != null
+                                      ? Image.network(photo, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _PlaceholderPhoto(name: name, index: i))
+                                      : _PlaceholderPhoto(name: name, index: i),
+                                ),
+                                // Gradient overlay
+                                Positioned.fill(child: Container(
+                                  decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                                      colors: [Colors.transparent, Colors.transparent, Colors.black.withValues(alpha: 0.85)], stops: const [0.0, 0.45, 1.0])),
+                                )),
+                                // Match badge
+                                Positioned(top: 12, right: 12, child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(8)),
+                                  child: Text('$matchScore%', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                                )),
+                                // User info at bottom
+                                Positioned(bottom: 0, left: 0, right: 0, child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                                    const SizedBox(height: 2),
+                                    Text('${age.isNotEmpty ? '$age · ' : ''}$city', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                                      child: Text(style, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9))),
+                                    ),
+                                  ]),
+                                )),
+                              ]),
                             ),
                           );
                         },
                       ),
                     ),
 
-                  // ── YOUR STATUS ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Your Status', style: context.textTheme.displaySmall!.copyWith(color: textPri)),
-                        const SizedBox(height: 6),
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await showModalBottomSheet<bool>(
-                              context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                              builder: (_) => const PostStatusSheet(),
-                            );
-                            if (result == true) _loadAll();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(border: Border.all(color: borderCol), borderRadius: BorderRadius.circular(14)),
-                            child: Center(child: Text('+ Post where you\'re going', style: TextStyle(fontSize: 13, color: context.colors.green, fontWeight: FontWeight.w600))),
-                          ),
+                  // Browse Companions CTA
+                  if (!_isLoading && _travelers.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                      child: GestureDetector(
+                        onTap: () => context.go('/search'),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(color: c.primarySoft, borderRadius: BorderRadius.circular(14)),
+                          child: Center(child: Text('Browse All Companions →', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: c.primary))),
                         ),
-                      ],
+                      ),
+                    ),
+
+                  // ── TRENDING DESTINATIONS ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 14),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('Trending Now', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700, color: c.text)),
+                      GestureDetector(onTap: () => context.go('/search'), child: Text('Explore →', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.primary))),
+                    ]),
+                  ),
+
+                  SizedBox(
+                    height: 56,
+                    child: _isLoading ? const SizedBox() : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _destinations.length > 6 ? 6 : _destinations.length,
+                      itemBuilder: (_, i) {
+                        final d = _destinations[i];
+                        return GestureDetector(
+                          onTap: () => context.push('/destination/${d['slug']}'),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14)),
+                            child: Row(children: [
+                              Text(d['emoji'] ?? '🗺️', style: const TextStyle(fontSize: 22)),
+                              const SizedBox(width: 8),
+                              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                                Text(d['name'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: c.text)),
+                                Text('${d['travelerCount'] ?? 0} active', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: c.muted)),
+                              ]),
+                            ]),
+                          ),
+                        );
+                      },
                     ),
                   ),
 
-                  // ── QUOTE ──
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: context.colors.green.withValues(alpha: isDark ? 0.08 : 0.03),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(children: [
-                      Text(
-                        '"The world is a book and those who do not travel read only one page."',
-                        style: TextStyle(fontFamily: 'Playfair Display', fontSize: 14, fontStyle: FontStyle.italic, color: textPri, height: 1.5),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 6),
-                      Text('— Saint Augustine', style: context.textTheme.bodySmall!.copyWith(color: textMut)),
-                    ]),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-
-          const Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: ZussGoBottomNav(currentIndex: 0),
-          ),
+          const Positioned(bottom: 0, left: 0, right: 0, child: ZussGoBottomNav(currentIndex: 0)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPeakBanner({required bool isDark, required Color bgMuted}) {
-    final d = _peakDestinations[_currentPeakIndex % _peakDestinations.length];
-    final slug = d['slug']?.toString() ?? '';
-    final w = _weatherData[slug];
-    final temp = w?['temp'] ?? '--';
-    final wIcon = w?['icon'] ?? '🌤️';
-    final peakLabel = DestinationData.getPeakLabel(slug);
-    final bestLabel = DestinationData.getBestMonthsLabel(slug);
-    final dotCount = _peakDestinations.length > 5 ? 5 : _peakDestinations.length;
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 600),
-      child: GestureDetector(
-        key: ValueKey(_currentPeakIndex),
-        onTap: () => context.push('/destination/$slug'),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.colors.amber.withValues(alpha: isDark ? 0.08 : 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.colors.amber.withValues(alpha: isDark ? 0.15 : 0.08)),
-          ),
-          child: Column(children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('$wIcon BEST TO VISIT NOW', style: TextStyle(fontSize: 10, color: context.colors.amber, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 2),
-                    Text('${d['name']} — $peakLabel', style: context.textTheme.labelLarge!.copyWith(color: ZussGoTheme.primaryText(context))),
-                    Text('Best: $bestLabel • ${temp}°C', style: context.textTheme.bodySmall!.copyWith(color: ZussGoTheme.secondaryText(context))),
-                  ]),
-                ),
-                Column(children: [
-                  Text(wIcon.toString(), style: const TextStyle(fontSize: 28)),
-                  Text('$temp°C', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.colors.amber)),
-                ]),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(dotCount, (i) {
-                final isActive = i == (_currentPeakIndex % dotCount);
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: isActive ? 16 : 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: isActive ? context.colors.amber : ZussGoTheme.border(context),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
-          ]),
-        ),
       ),
     );
   }
 }
 
-// ── MODERN THEME TOGGLE ──
-class _ModernThemeToggle extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onToggle;
-  const _ModernThemeToggle({required this.isDark, required this.onToggle});
+// Reusable user avatar with photo support
+class _UserAvatar extends StatelessWidget {
+  final String? photoUrl;
+  final String name;
+  final double size;
+  const _UserAvatar({this.photoUrl, required this.name, this.size = 44});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        width: 60,
-        height: 32,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5EDEB),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFCFE1DC), width: 1.5),
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: animation,
-                  child: child,
-                ),
-              );
-            },
-            child: Icon(
-              isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-              key: ValueKey<bool>(isDark),
-              size: 20,
-              color: context.colors.amber,
-            ),
-          ),
-        ),
+    final c = context.colors;
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.35),
+        gradient: LinearGradient(colors: [c.primary, const Color(0xFFFF8A65)]),
       ),
+      clipBehavior: Clip.hardEdge,
+      child: photoUrl != null
+          ? Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initial(c))
+          : _initial(c),
+    );
+  }
+
+  Widget _initial(ZussGoColors c) => Center(
+    child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'Z', style: GoogleFonts.outfit(fontSize: size * 0.4, fontWeight: FontWeight.w800, color: Colors.white)),
+  );
+}
+
+// Placeholder gradient photo for users without profile photos
+class _PlaceholderPhoto extends StatelessWidget {
+  final String name;
+  final int index;
+  const _PlaceholderPhoto({required this.name, required this.index});
+
+  static const _gradients = [
+    [Color(0xFF2A3828), Color(0xFF1A2A1E)],
+    [Color(0xFF382A1A), Color(0xFF2A1E10)],
+    [Color(0xFF28203A), Color(0xFF1E1830)],
+    [Color(0xFF2A1828), Color(0xFF1E1420)],
+    [Color(0xFF1A2838), Color(0xFF101E28)],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final grad = _gradients[index % _gradients.length];
+    return Container(
+      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: grad)),
+      child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: GoogleFonts.outfit(fontSize: 64, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.15)))),
     );
   }
 }

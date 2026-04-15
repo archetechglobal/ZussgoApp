@@ -1,10 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import '../../config/api.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
-import '../../widgets/gradient_button.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
@@ -16,477 +13,286 @@ class TravelerProfileScreen extends StatefulWidget {
 }
 
 class _TravelerProfileScreenState extends State<TravelerProfileScreen> {
-  bool _sending = false, _sent = false, _loading = true;
-  bool _isConnected = false;
-  String? _tripId, _error;
   Map<String, dynamic>? _profile;
+  bool _loading = true;
+  bool _requestSent = false;
+  String? _myUserId;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _load();
   }
 
-  double? _score;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final e = GoRouterState.of(context).extra;
-    if (e is Map<String, dynamic>) {
-      if (e['tripId'] != null) _tripId = e['tripId'];
-      if (e['score'] != null) _score = (e['score'] as num).toDouble();
-      if (e['isConnected'] == true) _isConnected = true;
-    }
-  }
-
-  Future<void> _loadProfile() async {
-    final user = await AuthService.getSavedUser();
-    final uid = user?['userId'];
-    final r = await ApiService.getUserProfile(widget.travelerId, currentUserId: uid);
+  Future<void> _load() async {
+    final me = await AuthService.getSavedUser();
+    _myUserId = me?['userId'];
+    final r = await ApiService.getUserProfile(widget.travelerId);
     if (mounted) {
-      if (r["success"] == true) {
-        final profileData = r["data"];
-        if (profileData != null && profileData['rating'] == null) {
-          try {
-            final r2 = await http.get(Uri.parse(ApiConfig.ratingsByUser(widget.travelerId)));
-            if (r2.statusCode == 200) {
-              final rData = jsonDecode(r2.body);
-              if (rData['success'] == true && rData['data'] != null) {
-                final dList = rData['data'];
-                if (dList is List && dList.isNotEmpty) {
-                  double sum = 0;
-                  for (var i in dList) sum += (i['score'] as num?)?.toDouble() ?? 0.0;
-                  profileData['rating'] = (sum / dList.length).toStringAsFixed(1);
-                } else if (dList is Map && dList['stats'] != null) {
-                  profileData['rating'] = (dList['stats']['average'] as num).toDouble().toStringAsFixed(1);
-                }
-              }
-            }
-          } catch (_) {}
-        }
-        setState(() {
-          _profile = profileData;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = r["message"] ?? "Could not load profile";
-          _loading = false;
-        });
-      }
+      setState(() {
+        _loading = false;
+        if (r['success'] == true) _profile = r['data'];
+      });
     }
   }
 
   Future<void> _sendRequest() async {
-    final u = await AuthService.getSavedUser();
-    final uid = u?['userId'];
-    if (uid == null) return;
-    setState(() {
-      _sending = true;
-      _error = null;
-    });
-    String? tid = _tripId;
-    if (tid == null) {
-      final tr = await ApiService.getMyTrips(uid);
-      if (tr["success"] == true) {
-        final up = List<Map<String, dynamic>>.from(tr["data"]?["upcoming"] ?? []);
-        if (up.isNotEmpty) tid = up[0]['id'];
+    if (_myUserId == null) return;
+    final r = await ApiService.sendMatchRequest(userId: _myUserId!, receiverId: widget.travelerId);
+    if (mounted) {
+      if (r['success'] == true) {
+        setState(() => _requestSent = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r['message'] ?? 'Failed to send request'), backgroundColor: context.colors.rose),
+        );
       }
     }
-    if (tid == null) {
-      setState(() {
-        _sending = false;
-        _error = 'Create a trip first to send a request';
-      });
-      return;
-    }
-    final r = await ApiService.sendMatchRequest(userId: uid, receiverId: widget.travelerId, tripId: tid, message: "I'd love to connect for an upcoming trip");
-    setState(() {
-      _sending = false;
-    });
-    if (r["success"] == true && mounted) {
-      setState(() => _sent = true);
-      showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => Dialog(
-              backgroundColor: ZussGoTheme.cardBg(context),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.check_circle_rounded, size: 44, color: context.colors.green),
-                    const SizedBox(height: 10),
-                    Text('Request Sent!', style: context.textTheme.displaySmall!.adaptive(context)),
-                    const SizedBox(height: 6),
-                    Text("They'll be notified soon!", style: context.textTheme.bodyMedium!, textAlign: TextAlign.center),
-                    const SizedBox(height: 18),
-                    GradientButton(
-                        text: 'Done',
-                        onPressed: () {
-                          Navigator.pop(context);
-                          context.pop();
-                        }),
-                  ]))));
-    } else if (mounted) setState(() => _error = r["message"]);
-  }
-
-  Widget _chip(String label, {IconData? icon, String? emoji, Color? color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: color ?? context.colors.green, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (emoji != null) ...[Text(emoji, style: const TextStyle(fontSize: 14)), const SizedBox(width: 4)],
-          if (icon != null) ...[Icon(icon, size: 14, color: Colors.white), const SizedBox(width: 4)],
-          Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13, fontFamily: 'Outfit')),
-        ],
-      ),
-    );
-  }
-
-  Widget _statCard(String label, String value, Color color, double width) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: width,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: ZussGoTheme.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ZussGoTheme.border(context)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02), blurRadius: 10)],
-      ),
-      child: Column(
-        children: [
-          Text(value, style: TextStyle(fontFamily: 'Playfair Display', fontSize: 18, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis),
-          Text(label, style: TextStyle(fontSize: 10, color: ZussGoTheme.mutedText(context))),
-        ],
-      ),
-    );
-  }
-
-  Widget _vibeChip(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13, fontFamily: 'Outfit')),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(backgroundColor: ZussGoTheme.scaffoldBg(context), body: Center(child: CircularProgressIndicator(color: context.colors.green)));
-    }
-
-    if (_profile == null) {
-      return Scaffold(
-          backgroundColor: ZussGoTheme.scaffoldBg(context),
-          appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: BackButton(color: ZussGoTheme.primaryText(context))),
-          body: Center(child: Text('Profile not found', style: context.textTheme.displaySmall!.adaptive(context))));
-    }
-
-    final p = _profile!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final initials = ((p['fullName'] ?? 'U') as String).substring(0, 1).toUpperCase();
-    final matchScore = _score != null ? "${_score!.round()}%" : "85%";
+    final c = context.colors;
+    final p = _profile ?? {};
+    final name = p['fullName'] ?? 'Traveler';
+    final city = p['city'] ?? 'India';
+    final age = p['age']?.toString() ?? '';
+    final style = p['travelStyle'] ?? 'Explorer';
+    final bio = p['bio'] ?? '';
+    final interests = List<String>.from(p['interests'] ?? []);
+    final rating = (p['rating'] as num?)?.toStringAsFixed(1) ?? '4.8';
 
     return Scaffold(
-      backgroundColor: ZussGoTheme.scaffoldBg(context),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Banner & Top Section exactly like Image 3
-            SizedBox(
-              height: 330,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    height: 280,
-                    width: double.infinity,
-                    decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFEAB308), Color(0xFFF59E0B)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
+      backgroundColor: c.bg,
+      body: Column(
+        children: [
+          // Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 16),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => context.pop(),
+                  child: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(13), border: Border.all(color: c.border)),
+                    child: Icon(Icons.arrow_back_rounded, color: c.text, size: 16),
                   ),
-                  Positioned(
-                    top: 50,
-                    left: 20,
-                    child: GestureDetector(
-                      onTap: () => context.pop(),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    child: SafeArea(
-                      child: Center(
-                        child: Text(
-                          'Full Profile',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Outfit'),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 220,
-                    left: 24,
-                    child: Container(
-                      width: 100,
-                      height: 100,
+                ),
+                const SizedBox(width: 10),
+                Text('Companion', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: c.text)),
+                const Spacer(),
+                Text('⚑', style: const TextStyle(fontSize: 18)),
+              ],
+            ),
+          ),
+
+          if (_loading)
+            Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: c.primary)))
+          else
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // ── Avatar ──
+                    Container(
+                      width: 90, height: 90,
                       decoration: BoxDecoration(
-                        color: ZussGoTheme.scaffoldBg(context),
                         borderRadius: BorderRadius.circular(28),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1), blurRadius: 15, offset: const Offset(0, 5))],
+                        gradient: const LinearGradient(colors: [Color(0xFF2A3828), Color(0xFF1A2A1E)]),
+                        border: Border.all(color: c.primaryMid, width: 3),
                       ),
-                      child: Center(
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Color(0xFFF43F5E), Color(0xFFF59E0B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(initials, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Playfair Display')),
-                        ),
-                      ),
+                      alignment: Alignment.center,
+                      child: Text(name.isNotEmpty ? '🧑‍💻' : '👤', style: const TextStyle(fontSize: 48)),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p['fullName'] ?? 'Traveler', 
-                          style: TextStyle(fontFamily: 'Playfair Display', fontSize: 26, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context)),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${p['age'] ?? 'Age'} • ${p['gender'] ?? 'Gender'} • ${p['city'] ?? 'Location'}', 
-                          style: TextStyle(fontSize: 14, color: ZussGoTheme.mutedText(context), fontFamily: 'Outfit'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('${p['rating'] ?? '0.0'}', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.w800, color: context.colors.amber)),
-                      Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: context.colors.amber, size: 14),
-                          const SizedBox(width: 2),
-                          Text('Rating', style: TextStyle(fontSize: 11, color: context.colors.amber)),
-                        ],
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
+                    const SizedBox(height: 14),
 
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Bio Quote
-                  if (p['bio'] != null && p['bio'].toString().isNotEmpty)
+                    // ── Name ──
+                    Text(name, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: c.text)),
+                    const SizedBox(height: 4),
+                    Text('📍 $city${age.isNotEmpty ? ' · ${age}y' : ''} · $style', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.textSecondary)),
+                    const SizedBox(height: 10),
+
+                    // ── Match Badge ──
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: ZussGoTheme.mutedBg(context),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: ZussGoTheme.border(context), width: 1),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '"${p['bio']}"',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: ZussGoTheme.primaryText(context),
-                            fontSize: 14,
-                            fontFamily: 'Outfit',
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // Stats Row
-                  LayoutBuilder(builder: (context, constraints) {
-                    final itemW = (constraints.maxWidth - 16) / 3;
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _statCard('Trips', '${p['tripsCount'] ?? 0}', context.colors.green, itemW),
-                        _statCard('Friends', '${p['friendsCount'] ?? 0}', context.colors.sky, itemW),
-                        _statCard('Match', matchScore, context.colors.rose, itemW),
-                      ],
-                    );
-                  }),
-                  const SizedBox(height: 24),
-
-                  // Style & Mindset
-                  Text('Style & Mindset', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 20, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context))),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 10,
-                    children: [
-                      if (p['travelStyle'] != null) _chip(p['travelStyle']),
-                      if (p['schedule'] != null) _chip(p['schedule']),
-                      if (p['socialEnergy'] != null) _chip(p['socialEnergy']),
-                      if (p['planningStyle'] != null) _chip(p['planningStyle']),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Interests
-                  if (p['interests'] != null && (p['interests'] as List).isNotEmpty) ...[
-                    Text('Interests', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 20, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context))),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: (p['interests'] as List).map((i) => _vibeChip(i.toString(), Icons.local_activity_rounded, context.colors.sky)).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Values
-                  if (p['values'] != null && (p['values'] as List).isNotEmpty) ...[
-                    Text('Values', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 20, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context))),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: (p['values'] as List).map((v) => _vibeChip(v.toString(), Icons.favorite_rounded, context.colors.rose)).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Energy Level
-                  if (p['energyLevel'] != null) ...[
-                    Text('Energy Level', style: TextStyle(fontFamily: 'Playfair Display', fontSize: 20, fontWeight: FontWeight.bold, color: ZussGoTheme.primaryText(context))),
-                    const SizedBox(height: 12),
-                    _vibeChip(p['energyLevel'], Icons.bolt_rounded, context.colors.amber),
-                  ],
-
-                  if (_error != null)
-                    Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(top: 16),
-                        decoration: BoxDecoration(color: context.colors.rose.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
-                        child: Row(children: [Icon(Icons.info_outline_rounded, color: context.colors.rose, size: 16), SizedBox(width: 6), Expanded(child: Text(_error!, style: TextStyle(color: context.colors.rose, fontSize: 13)))])),
-
-                  const SizedBox(height: 24),
-
-                  // Action Buttons matching Mockup 3
-                  if (!_isConnected) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: GestureDetector(
-                            onTap: () => context.pop(),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              decoration: BoxDecoration(
-                                color: ZussGoTheme.cardBg(context),
-                                border: Border.all(color: ZussGoTheme.border(context), width: 1.5),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02), blurRadius: 6)],
-                              ),
-                              alignment: Alignment.center,
-                              child: Text('Pass', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w700, color: ZussGoTheme.primaryText(context), fontSize: 16)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: _sent
-                              ? Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 18),
-                                  decoration: BoxDecoration(color: context.colors.greenLight, borderRadius: BorderRadius.circular(16)),
-                                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_rounded, color: context.colors.green, size: 20), SizedBox(width: 8), Text('Sent ✓', style: TextStyle(color: context.colors.green, fontFamily: 'Outfit', fontWeight: FontWeight.w700, fontSize: 16))]))
-                              : GestureDetector(
-                                  onTap: _sendRequest,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 18),
-                                    decoration: BoxDecoration(color: const Color(0xFF2D9F6F), borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: const Color(0xFF2D9F6F).withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        if (_sending) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) else ...[
-                                          const Text("Send Request", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Outfit')),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ],
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(color: c.primarySoft, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.primaryMid)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text('94%', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: c.primary)),
+                        const SizedBox(width: 6),
+                        Text('Match Score', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.textSecondary)),
+                      ]),
                     ),
                     const SizedBox(height: 16),
-                  ],
-                  if (_isConnected)
-                    GestureDetector(
-                      onTap: () => context.push('/trip-complete', extra: {'trip': {'id': _tripId}, 'ratee': _profile, 'isGroup': false}),
-                      child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(color: context.colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.star_rounded, color: context.colors.amber, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Rate Traveler', style: TextStyle(color: context.colors.amber, fontWeight: FontWeight.w700, fontFamily: 'Outfit', fontSize: 15)),
-                        ],
-                      ),
+
+                    // ── About ──
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('About', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: c.muted)),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.border)),
+                          child: Text(
+                            bio.isNotEmpty ? bio : 'Full-time traveler, part-time photographer. Love meeting new people on mountain trails.',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.textSecondary, height: 1.6),
+                          ),
+                        ),
+                      ]),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+
+                    // ── Tags ──
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Wrap(spacing: 6, runSpacing: 6, children: [
+                        if (interests.isNotEmpty)
+                          ...interests.map((i) => _Tag(label: i, color: c.primary, bg: c.primarySoft))
+                        else ...[
+                          _Tag(label: 'Adventure', color: c.primary, bg: c.primarySoft),
+                          _Tag(label: 'Trekking', color: c.primary, bg: c.primarySoft),
+                          _Tag(label: 'Budget', color: c.gold, bg: c.goldSoft),
+                          _Tag(label: 'Photography', color: c.sage, bg: c.sageSoft),
+                        ],
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Stats ──
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: c.border)),
+                      child: Row(children: [
+                        _Stat(value: '23', label: 'Trips', color: c.primary),
+                        _Stat(value: '$rating★', label: 'Rating', color: c.sage, divider: true),
+                        _Stat(value: '48', label: 'Companions', color: c.gold, divider: true),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Trust Score ──
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.border)),
+                      child: Row(children: [
+                        const Text('🛡️', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Trust Score: $rating', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: c.text)),
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            _TrustChip(label: '✓ Verified', color: c.sage, bg: c.sageSoft),
+                            const SizedBox(width: 4),
+                            _TrustChip(label: '🪪 ID', color: c.lavender, bg: c.lavenderSoft),
+                          ]),
+                        ])),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Upcoming Trips ──
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Upcoming Trips', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: c.muted)),
+                        const SizedBox(height: 8),
+                        _TripCard(emoji: '🏔️', name: 'Spiti Valley', detail: 'May 12–18 · Looking for 2 more', c: c),
+                        const SizedBox(height: 8),
+                        _TripCard(emoji: '🏕️', name: 'Kasol–Kheerganga', detail: 'Jun 5–8 · Open to companions', c: c),
+                      ]),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+
+          // ── Bottom Actions ──
+          Container(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 16),
+            child: Row(children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: _requestSent ? null : _sendRequest,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(color: _requestSent ? c.sage : c.primary, borderRadius: BorderRadius.circular(16), boxShadow: [if (!_requestSent) BoxShadow(color: const Color(0x30FF6B4A), blurRadius: 16)]),
+                    child: Center(child: Text(_requestSent ? '✓ Request Sent' : '🤝 Send Companion Request', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 56, height: 48,
+                decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.primaryMid, width: 2)),
+                child: const Center(child: Text('💬', style: TextStyle(fontSize: 20))),
+              ),
+            ]),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _Tag extends StatelessWidget {
+  final String label; final Color color, bg;
+  const _Tag({required this.label, required this.color, required this.bg});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+    child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+  );
+}
+
+class _Stat extends StatelessWidget {
+  final String value, label; final Color color; final bool divider;
+  const _Stat({required this.value, required this.label, required this.color, this.divider = false});
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Expanded(child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: divider ? BoxDecoration(border: Border(left: BorderSide(color: c.border))) : null,
+      child: Column(children: [
+        Text(value, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+        Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 10, color: c.muted)),
+      ]),
+    ));
+  }
+}
+
+class _TrustChip extends StatelessWidget {
+  final String label; final Color color, bg;
+  const _TrustChip({required this.label, required this.color, required this.bg});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+    child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+  );
+}
+
+class _TripCard extends StatelessWidget {
+  final String emoji, name, detail; final ZussGoColors c;
+  const _TripCard({required this.emoji, required this.name, required this.detail, required this.c});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.border)),
+    child: Row(children: [
+      Text(emoji, style: const TextStyle(fontSize: 24)),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(name, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: c.text)),
+        const SizedBox(height: 2),
+        Text(detail, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.muted)),
+      ])),
+      Text('›', style: GoogleFonts.outfit(fontSize: 16, color: c.primary)),
+    ]),
+  );
 }

@@ -82,7 +82,7 @@ class ApiService {
   static Future<Map<String, dynamic>> sendMatchRequest({
     required String userId,
     required String receiverId,
-    required String tripId,
+    String? tripId,
     String? message,
   }) async {
     try {
@@ -92,7 +92,7 @@ class ApiService {
         body: jsonEncode({
           "userId": userId,
           "receiverId": receiverId,
-          "tripId": tripId,
+          if (tripId != null) "tripId": tripId,
           if (message != null) "message": message,
         }),
       );

@@ -1,74 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 @immutable
 class ZussGoColors extends ThemeExtension<ZussGoColors> {
-  final Color bgPrimary;
-  final Color bgSecondary;
-  final Color bgCard;
-  final Color bgMuted;
-  final Color border;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color textMuted;
-  
-  // Greens
-  final Color green;
-  final Color greenDark;
-  final Color greenLight;
-
-  // Accents
-  final Color amber;
-  final Color rose;
-  final Color sky;
-  final Color lavender;
-  final Color mint;
+  final Color bg;
+  final Color surface;
+  final Color card;
+  final Color card2;
+  final Color cardWarm;
+  final Color primary;
+  final Color primarySoft;
+  final Color primaryMid;
+  final Color gold;
+  final Color goldSoft;
+  final Color goldMid;
   final Color sage;
+  final Color sageSoft;
+  final Color sageMid;
+  final Color lavender;
+  final Color lavenderSoft;
+  final Color lavenderMid;
+  final Color rose;
+  final Color roseSoft;
+  final Color text;
+  final Color textSecondary;
+  final Color muted;
+  final Color border;
+  final Color borderWarm;
+
+  // Legacy aliases
+  Color get bgPrimary => bg;
+  Color get bgSecondary => surface;
+  Color get bgCard => card;
+  Color get bgMuted => card2;
+  Color get textPrimary => text;
+  Color get textMuted => muted;
+  Color get green => primary;
+  Color get greenDark => primary;
+  Color get greenLight => primarySoft;
+  Color get amber => gold;
+  Color get sky => lavender;
+  Color get mint => sage;
 
   const ZussGoColors({
-    required this.bgPrimary,
-    required this.bgSecondary,
-    required this.bgCard,
-    required this.bgMuted,
-    required this.border,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.textMuted,
-    required this.green,
-    required this.greenDark,
-    required this.greenLight,
-    required this.amber,
-    required this.rose,
-    required this.sky,
-    required this.lavender,
-    required this.mint,
-    required this.sage,
+    required this.bg, required this.surface, required this.card, required this.card2, required this.cardWarm,
+    required this.primary, required this.primarySoft, required this.primaryMid,
+    required this.gold, required this.goldSoft, required this.goldMid,
+    required this.sage, required this.sageSoft, required this.sageMid,
+    required this.lavender, required this.lavenderSoft, required this.lavenderMid,
+    required this.rose, required this.roseSoft,
+    required this.text, required this.textSecondary, required this.muted,
+    required this.border, required this.borderWarm,
   });
 
   @override
   ZussGoColors copyWith({
-    Color? bgPrimary, Color? bgSecondary, Color? bgCard, Color? bgMuted,
-    Color? border, Color? textPrimary, Color? textSecondary, Color? textMuted,
-    Color? green, Color? greenDark, Color? greenLight,
-    Color? amber, Color? rose, Color? sky, Color? lavender, Color? mint, Color? sage,
+    Color? bg, Color? surface, Color? card, Color? card2, Color? cardWarm,
+    Color? primary, Color? primarySoft, Color? primaryMid,
+    Color? gold, Color? goldSoft, Color? goldMid,
+    Color? sage, Color? sageSoft, Color? sageMid,
+    Color? lavender, Color? lavenderSoft, Color? lavenderMid,
+    Color? rose, Color? roseSoft,
+    Color? text, Color? textSecondary, Color? muted,
+    Color? border, Color? borderWarm,
   }) {
     return ZussGoColors(
-      bgPrimary: bgPrimary ?? this.bgPrimary,
-      bgSecondary: bgSecondary ?? this.bgSecondary,
-      bgCard: bgCard ?? this.bgCard,
-      bgMuted: bgMuted ?? this.bgMuted,
-      border: border ?? this.border,
-      textPrimary: textPrimary ?? this.textPrimary,
-      textSecondary: textSecondary ?? this.textSecondary,
-      textMuted: textMuted ?? this.textMuted,
-      green: green ?? this.green,
-      greenDark: greenDark ?? this.greenDark,
-      greenLight: greenLight ?? this.greenLight,
-      amber: amber ?? this.amber,
-      rose: rose ?? this.rose,
-      sky: sky ?? this.sky,
-      lavender: lavender ?? this.lavender,
-      mint: mint ?? this.mint,
-      sage: sage ?? this.sage,
+      bg: bg ?? this.bg, surface: surface ?? this.surface, card: card ?? this.card,
+      card2: card2 ?? this.card2, cardWarm: cardWarm ?? this.cardWarm,
+      primary: primary ?? this.primary, primarySoft: primarySoft ?? this.primarySoft, primaryMid: primaryMid ?? this.primaryMid,
+      gold: gold ?? this.gold, goldSoft: goldSoft ?? this.goldSoft, goldMid: goldMid ?? this.goldMid,
+      sage: sage ?? this.sage, sageSoft: sageSoft ?? this.sageSoft, sageMid: sageMid ?? this.sageMid,
+      lavender: lavender ?? this.lavender, lavenderSoft: lavenderSoft ?? this.lavenderSoft, lavenderMid: lavenderMid ?? this.lavenderMid,
+      rose: rose ?? this.rose, roseSoft: roseSoft ?? this.roseSoft,
+      text: text ?? this.text, textSecondary: textSecondary ?? this.textSecondary, muted: muted ?? this.muted,
+      border: border ?? this.border, borderWarm: borderWarm ?? this.borderWarm,
     );
   }
 
@@ -76,311 +81,183 @@ class ZussGoColors extends ThemeExtension<ZussGoColors> {
   ZussGoColors lerp(ThemeExtension<ZussGoColors>? other, double t) {
     if (other is! ZussGoColors) return this;
     return ZussGoColors(
-      bgPrimary: Color.lerp(bgPrimary, other.bgPrimary, t)!,
-      bgSecondary: Color.lerp(bgSecondary, other.bgSecondary, t)!,
-      bgCard: Color.lerp(bgCard, other.bgCard, t)!,
-      bgMuted: Color.lerp(bgMuted, other.bgMuted, t)!,
-      border: Color.lerp(border, other.border, t)!,
-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
-      green: Color.lerp(green, other.green, t)!,
-      greenDark: Color.lerp(greenDark, other.greenDark, t)!,
-      greenLight: Color.lerp(greenLight, other.greenLight, t)!,
-      amber: Color.lerp(amber, other.amber, t)!,
-      rose: Color.lerp(rose, other.rose, t)!,
-      sky: Color.lerp(sky, other.sky, t)!,
-      lavender: Color.lerp(lavender, other.lavender, t)!,
-      mint: Color.lerp(mint, other.mint, t)!,
-      sage: Color.lerp(sage, other.sage, t)!,
+      bg: Color.lerp(bg, other.bg, t)!, surface: Color.lerp(surface, other.surface, t)!,
+      card: Color.lerp(card, other.card, t)!, card2: Color.lerp(card2, other.card2, t)!,
+      cardWarm: Color.lerp(cardWarm, other.cardWarm, t)!,
+      primary: Color.lerp(primary, other.primary, t)!, primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
+      primaryMid: Color.lerp(primaryMid, other.primaryMid, t)!,
+      gold: Color.lerp(gold, other.gold, t)!, goldSoft: Color.lerp(goldSoft, other.goldSoft, t)!,
+      goldMid: Color.lerp(goldMid, other.goldMid, t)!,
+      sage: Color.lerp(sage, other.sage, t)!, sageSoft: Color.lerp(sageSoft, other.sageSoft, t)!,
+      sageMid: Color.lerp(sageMid, other.sageMid, t)!,
+      lavender: Color.lerp(lavender, other.lavender, t)!, lavenderSoft: Color.lerp(lavenderSoft, other.lavenderSoft, t)!,
+      lavenderMid: Color.lerp(lavenderMid, other.lavenderMid, t)!,
+      rose: Color.lerp(rose, other.rose, t)!, roseSoft: Color.lerp(roseSoft, other.roseSoft, t)!,
+      text: Color.lerp(text, other.text, t)!, textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      border: Color.lerp(border, other.border, t)!, borderWarm: Color.lerp(borderWarm, other.borderWarm, t)!,
     );
   }
 
-  static const ZussGoColors light = ZussGoColors(
-    bgPrimary: Color(0xFFFAFAF8),
-    bgSecondary: Color(0xFFFFFFFF),
-    bgCard: Color(0xFFFFFFFF),
-    bgMuted: Color(0xFFF3F4F1),
-    border: Color(0xFFE8E8E4),
-    textPrimary: Color(0xFF1A1A1A),
-    textSecondary: Color(0xFF6B7280),
-    textMuted: Color(0xFF9CA3AF),
-    green: Color(0xFF2D9F6F),
-    greenDark: Color(0xFF1B7A5A),
-    greenLight: Color(0xFFE6F5EE),
-    amber: Color(0xFFE8A849),
-    rose: Color(0xFFE85D75),
-    sky: Color(0xFF4AADE8),
-    lavender: Color(0xFF8B7EC8),
-    mint: Color(0xFF2ECDA7),
-    sage: Color(0xFF7CB69A),
+  static const ZussGoColors dark = ZussGoColors(
+    bg: Color(0xFF0D0B0E), surface: Color(0xFF14121A), card: Color(0xFF1C1924),
+    card2: Color(0xFF231F2E), cardWarm: Color(0xFF1E1A16),
+    primary: Color(0xFFFF6B4A), primarySoft: Color(0x20FF6B4A), primaryMid: Color(0x40FF6B4A),
+    gold: Color(0xFFFFBD3D), goldSoft: Color(0x18FFBD3D), goldMid: Color(0x35FFBD3D),
+    sage: Color(0xFF4ECBA0), sageSoft: Color(0x184ECBA0), sageMid: Color(0x354ECBA0),
+    lavender: Color(0xFFA78BFA), lavenderSoft: Color(0x18A78BFA), lavenderMid: Color(0x35A78BFA),
+    rose: Color(0xFFFF6B8A), roseSoft: Color(0x18FF6B8A),
+    text: Color(0xFFF5F0EB), textSecondary: Color(0xFFB8AFA6), muted: Color(0xFF7D7573),
+    border: Color(0xFF2A2530), borderWarm: Color(0xFF332D28),
   );
 
-  static const ZussGoColors dark = ZussGoColors(
-    bgPrimary: Color(0xFF111111),
-    bgSecondary: Color(0xFF1E1E1E),
-    bgCard: Color(0xFF1E1E1E),
-    bgMuted: Color(0xFF2C2C2E),
-    border: Color(0xFF333333),
-    textPrimary: Color(0xFFF2F2F2),
-    textSecondary: Color(0xFFBBBBBB),
-    textMuted: Color(0xFF8A8A8A),
-    green: Color(0xFF2D9F6F),
-    greenDark: Color(0xFF1B7A5A),
-    greenLight: Color(0xFF183B2E), // Adjusted for dark mode background contrasts
-    amber: Color(0xFFE8A849),
-    rose: Color(0xFFE85D75),
-    sky: Color(0xFF4AADE8),
-    lavender: Color(0xFF8B7EC8),
-    mint: Color(0xFF2ECDA7),
-    sage: Color(0xFF7CB69A),
-  );
+  // Both themes are dark in V3
+  static const ZussGoColors light = dark;
 }
 
 class ZussGoTheme {
-  // ─── STATIC GRADIENTS ───
+  static const Color primary = Color(0xFFFF6B4A);
+  static const Color gold = Color(0xFFFFBD3D);
+  static const Color sage = Color(0xFF4ECBA0);
+  static const Color lavender = Color(0xFFA78BFA);
+  static const Color rose = Color(0xFFFF6B8A);
+
+  // Legacy aliases
+  static const Color green = Color(0xFFFF6B4A);
+  static const Color greenDark = Color(0xFFFF6B4A);
+  static const Color greenLight = Color(0x20FF6B4A);
+  static const Color amber = Color(0xFFFFBD3D);
+  static const Color sky = Color(0xFFA78BFA);
+  static const Color mint = Color(0xFF4ECBA0);
+
+  static const Color bgPrimary = Color(0xFF0D0B0E);
+  static const Color bgSecondary = Color(0xFF14121A);
+  static const Color bgMuted = Color(0xFF231F2E);
+  static const Color borderDefault = Color(0xFF2A2530);
+  static const Color textPrimary = Color(0xFFF5F0EB);
+  static const Color textSecondary = Color(0xFFB8AFA6);
+  static const Color textMuted = Color(0xFF7D7573);
+
   static const LinearGradient gradientPrimary = LinearGradient(
-    colors: [Color(0xFF2D9F6F), Color(0xFF1B7A5A)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF6B4A), Color(0xFFFF8A65)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
 
   static const LinearGradient gradientWarm = LinearGradient(
-    colors: [Color(0xFFE8A849), Color(0xFFE85D75)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [Color(0xFFFFBD3D), Color(0xFFFF6B4A)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
 
-  // ─── CONSTS FOR BACKWARD COMPATIBILITY ───
-  static const Color green = Color(0xFF2D9F6F);
-  static const Color greenDark = Color(0xFF1B7A5A);
-  static const Color greenLight = Color(0xFFE6F5EE);
-  static const Color amber = Color(0xFFE8A849);
-  static const Color rose = Color(0xFFE85D75);
-  static const Color sky = Color(0xFF4AADE8);
-  static const Color lavender = Color(0xFF8B7EC8);
-  static const Color mint = Color(0xFF2ECDA7);
-  static const Color sage = Color(0xFF7CB69A);
+  static const LinearGradient gradientHero = LinearGradient(
+    colors: [Color(0xFF2A1810), Color(0xFF1E1420), Color(0xFF1A1628)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+  );
 
-  static const Color bgPrimary = Color(0xFFFAFAF8);
-  static const Color bgSecondary = Color(0xFFFFFFFF);
-  static const Color bgMuted = Color(0xFFF3F4F1);
-  static const Color borderDefault = Color(0xFFE8E8E4);
-  
-  static const Color textPrimary = Color(0xFF1A1A1A);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textMuted = Color(0xFF9CA3AF);
-
-  static const Color darkBgPrimary = Color(0xFF111111);
-  static const Color darkBgSecondary = Color(0xFF1E1E1E);
-  static const Color darkBgMuted = Color(0xFF2C2C2E);
-  static const Color darkBorder = Color(0xFF333333);
-  static const Color darkTextPrimary = Color(0xFFF2F2F2);
-  static const Color darkTextSecondary = Color(0xFFBBBBBB);
-  static const Color darkTextMuted = Color(0xFF8A8A8A);
-
-  // ─── THEME ACCESSOR ───
   static ZussGoColors colors(BuildContext context) => Theme.of(context).extension<ZussGoColors>()!;
-  
-  // Backward compatibility alias for 'colors'
   static ZussGoColors of(BuildContext context) => colors(context);
 
-  // ─── CONTEXT-AWARE HELPERS (REFACTORED TO USE EXTENSION) ───
-  static Color scaffoldBg(BuildContext context) => colors(context).bgPrimary;
-  static Color cardBg(BuildContext context) => colors(context).bgCard;
-  static Color mutedBg(BuildContext context) => colors(context).bgMuted;
+  static Color scaffoldBg(BuildContext context) => colors(context).bg;
+  static Color cardBg(BuildContext context) => colors(context).card;
+  static Color mutedBg(BuildContext context) => colors(context).card2;
   static Color border(BuildContext context) => colors(context).border;
-  static Color primaryText(BuildContext context) => colors(context).textPrimary;
+  static Color primaryText(BuildContext context) => colors(context).text;
   static Color secondaryText(BuildContext context) => colors(context).textSecondary;
-  static Color mutedText(BuildContext context) => colors(context).textMuted;
+  static Color mutedText(BuildContext context) => colors(context).muted;
   static Color dividerColor(BuildContext context) => colors(context).border;
 
-  // ─── TYPOGRAPHY ───
-  static const TextStyle displayLarge = TextStyle(
-    fontFamily: 'Playfair Display', fontSize: 32, fontWeight: FontWeight.w700,
-    color: textPrimary, height: 1.15,
-  );
+  static TextStyle get displayLarge => GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: textPrimary, height: 1.15, letterSpacing: -1.5);
+  static TextStyle get displayMedium => GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: textPrimary, height: 1.2, letterSpacing: -1);
+  static TextStyle get displaySmall => GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary, height: 1.3);
+  static TextStyle get bodyLarge => GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w400, color: textSecondary, height: 1.5);
+  static TextStyle get bodyMedium => GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w400, color: textSecondary, height: 1.5);
+  static TextStyle get bodySmall => GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w400, color: textMuted, height: 1.4);
+  static TextStyle get labelBold => GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary, height: 1.3);
 
-  static const TextStyle displayMedium = TextStyle(
-    fontFamily: 'Playfair Display', fontSize: 24, fontWeight: FontWeight.w700,
-    color: textPrimary, height: 1.2,
-  );
-
-  static const TextStyle displaySmall = TextStyle(
-    fontFamily: 'Playfair Display', fontSize: 18, fontWeight: FontWeight.w600,
-    color: textPrimary, height: 1.3,
-  );
-
-  static const TextStyle bodyLarge = TextStyle(
-    fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w400,
-    color: textSecondary, height: 1.5,
-  );
-
-  static const TextStyle bodyMedium = TextStyle(
-    fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w400,
-    color: textSecondary, height: 1.5,
-  );
-
-  static const TextStyle bodySmall = TextStyle(
-    fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w400,
-    color: textMuted, height: 1.4,
-  );
-
-  static const TextStyle labelBold = TextStyle(
-    fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w600,
-    color: textPrimary, height: 1.3,
-  );
-
-  static TextTheme _buildTextTheme(ZussGoColors colorTheme) {
+  static TextTheme _buildTextTheme(ZussGoColors c) {
     return TextTheme(
-      displayLarge: TextStyle(fontFamily: 'Playfair Display', fontSize: 32, fontWeight: FontWeight.w700, color: colorTheme.textPrimary, height: 1.15),
-      displayMedium: TextStyle(fontFamily: 'Playfair Display', fontSize: 24, fontWeight: FontWeight.w700, color: colorTheme.textPrimary, height: 1.2),
-      displaySmall: TextStyle(fontFamily: 'Playfair Display', fontSize: 18, fontWeight: FontWeight.w600, color: colorTheme.textPrimary, height: 1.3),
-      bodyLarge: TextStyle(fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w400, color: colorTheme.textSecondary, height: 1.5),
-      bodyMedium: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w400, color: colorTheme.textSecondary, height: 1.5),
-      bodySmall: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w400, color: colorTheme.textMuted, height: 1.4),
-      labelLarge: TextStyle(fontFamily: 'Outfit', fontSize: 14, fontWeight: FontWeight.w600, color: colorTheme.textPrimary, height: 1.3),
+      displayLarge: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: c.text, height: 1.15, letterSpacing: -1.5),
+      displayMedium: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: c.text, height: 1.2, letterSpacing: -1),
+      displaySmall: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.text, height: 1.3),
+      headlineMedium: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w800, color: c.text, height: 1.25),
+      bodyLarge: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.5),
+      bodyMedium: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.5),
+      bodySmall: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w400, color: c.muted, height: 1.4),
+      labelLarge: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: c.text, height: 1.3),
+      labelSmall: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: c.primary, letterSpacing: 1),
     );
   }
 
-  // ─── LIGHT THEME ───
-  static ThemeData get lightTheme => ThemeData(
-    brightness: Brightness.light,
-    scaffoldBackgroundColor: ZussGoColors.light.bgPrimary,
-    fontFamily: 'Outfit',
-    extensions: const <ThemeExtension<dynamic>>[ZussGoColors.light],
-    textTheme: _buildTextTheme(ZussGoColors.light),
-    colorScheme: ColorScheme.light(
-      primary: ZussGoColors.light.green, 
-      secondary: ZussGoColors.light.amber, 
-      surface: ZussGoColors.light.bgSecondary, 
-      error: ZussGoColors.light.rose,
-    ),
-    appBarTheme: AppBarTheme(
-      backgroundColor: ZussGoColors.light.bgPrimary, elevation: 0,
-      iconTheme: IconThemeData(color: ZussGoColors.light.textPrimary),
-    ),
-    switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? ZussGoColors.light.green : Colors.grey),
-      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? ZussGoColors.light.greenLight : Colors.grey.shade300),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true, fillColor: ZussGoColors.light.bgMuted,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: ZussGoColors.light.green.withValues(alpha: 0.4), width: 1.5)),
-      hintStyle: bodyMedium.copyWith(color: ZussGoColors.light.textMuted),
-    ),
-  );
-
-  // ─── DARK THEME ───
   static ThemeData get darkTheme => ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: ZussGoColors.dark.bgPrimary,
-    fontFamily: 'Outfit',
+    scaffoldBackgroundColor: ZussGoColors.dark.bg,
+    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
     extensions: const <ThemeExtension<dynamic>>[ZussGoColors.dark],
     textTheme: _buildTextTheme(ZussGoColors.dark),
     colorScheme: ColorScheme.dark(
-      primary: ZussGoColors.dark.green, 
-      secondary: ZussGoColors.dark.amber, 
-      surface: ZussGoColors.dark.bgSecondary, 
-      error: ZussGoColors.dark.rose,
+      primary: ZussGoColors.dark.primary, secondary: ZussGoColors.dark.gold,
+      surface: ZussGoColors.dark.surface, error: ZussGoColors.dark.rose,
     ),
-    appBarTheme: AppBarTheme(
-      backgroundColor: ZussGoColors.dark.bgPrimary, elevation: 0,
-      iconTheme: IconThemeData(color: ZussGoColors.dark.textPrimary),
-    ),
-    switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? ZussGoColors.dark.green : Colors.grey),
-      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? ZussGoColors.dark.greenLight : Colors.grey.shade700),
-    ),
+    appBarTheme: AppBarTheme(backgroundColor: ZussGoColors.dark.bg, elevation: 0, iconTheme: IconThemeData(color: ZussGoColors.dark.text)),
     inputDecorationTheme: InputDecorationTheme(
-      filled: true, fillColor: ZussGoColors.dark.bgMuted,
+      filled: true, fillColor: ZussGoColors.dark.card,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: ZussGoColors.dark.border, width: 1)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: ZussGoColors.dark.border, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: ZussGoColors.dark.green.withValues(alpha: 0.5), width: 1.5)),
-      hintStyle: bodyMedium.copyWith(color: ZussGoColors.dark.textMuted),
-      labelStyle: bodyMedium.copyWith(color: ZussGoColors.dark.textSecondary),
-      prefixIconColor: ZussGoColors.dark.textMuted,
-      suffixIconColor: ZussGoColors.dark.textMuted,
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: ZussGoColors.dark.primary.withValues(alpha: 0.5), width: 1.5)),
+      hintStyle: GoogleFonts.plusJakartaSans(color: ZussGoColors.dark.muted, fontSize: 14),
     ),
     dividerColor: ZussGoColors.dark.border,
-    cardColor: ZussGoColors.dark.bgSecondary,
+    cardColor: ZussGoColors.dark.card,
   );
 
-  // ─── CARD DECORATIONS (context-aware) ───
+  static ThemeData get lightTheme => darkTheme;
+
   static BoxDecoration cardDecoration(BuildContext context) {
-    final colors = ZussGoTheme.colors(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      color: colors.bgCard,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.0 : 0.06), blurRadius: 16, offset: const Offset(0, 4))],
-    );
+    final c = colors(context);
+    return BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.border, width: 1));
   }
 
   static BoxDecoration glassCardDecoration(BuildContext context) {
-    final colors = ZussGoTheme.colors(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      color: colors.bgCard,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.0 : 0.04), blurRadius: 10, offset: const Offset(0, 2))],
-    );
+    final c = colors(context);
+    return BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border, width: 1));
   }
 
-  // ─── INPUT ───
   static InputDecoration inputDecoration({String? hint, Widget? prefix, Widget? suffix}) {
     return InputDecoration(
-      hintText: hint,
-      hintStyle: bodyMedium.copyWith(color: textMuted),
-      prefixIcon: prefix,
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: bgMuted,
+      hintText: hint, hintStyle: GoogleFonts.plusJakartaSans(color: textMuted, fontSize: 14),
+      prefixIcon: prefix, suffixIcon: suffix, filled: true, fillColor: const Color(0xFF1C1924),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: green.withValues(alpha: 0.4), width: 1.5)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2A2530), width: 1)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2A2530), width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primary.withValues(alpha: 0.5), width: 1.5)),
     );
   }
 
   static InputDecoration inputDecorationOf(BuildContext context, {String? hint, Widget? prefix, Widget? suffix}) {
-    final colors = ZussGoTheme.colors(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = colors(context);
     return InputDecoration(
-      hintText: hint,
-      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.textMuted),
-      prefixIcon: prefix,
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: colors.bgMuted,
+      hintText: hint, hintStyle: GoogleFonts.plusJakartaSans(color: c.muted, fontSize: 14),
+      prefixIcon: prefix, suffixIcon: suffix, filled: true, fillColor: c.card,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: isDark ? BorderSide(color: colors.border, width: 1) : BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: isDark ? BorderSide(color: colors.border, width: 1) : BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: colors.green.withValues(alpha: 0.5), width: 1.5)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.border, width: 1)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.border, width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.primary.withValues(alpha: 0.5), width: 1.5)),
     );
   }
 
-  // Legacy (backward compat)
-  static ThemeData get themeData => lightTheme;
+  static ThemeData get themeData => darkTheme;
 }
 
-// Extension to make static TextStyles context-aware
 extension ZussTextStyleExt on TextStyle {
   TextStyle adaptive(BuildContext context) {
-    final colors = ZussGoTheme.colors(context);
-    // Preserving mapping behavior via the extension
-    if (color == ZussGoTheme.textPrimary) return copyWith(color: colors.textPrimary);
-    if (color == ZussGoTheme.textSecondary) return copyWith(color: colors.textSecondary);
-    if (color == ZussGoTheme.textMuted) return copyWith(color: colors.textMuted);
+    final c = ZussGoTheme.colors(context);
+    if (color == ZussGoTheme.textPrimary) return copyWith(color: c.text);
+    if (color == ZussGoTheme.textSecondary) return copyWith(color: c.textSecondary);
+    if (color == ZussGoTheme.textMuted) return copyWith(color: c.muted);
     return this;
   }
 }
 
-// Extension to allow easy context-aware access to theme properties
 extension ThemeExt on BuildContext {
   ZussGoColors get colors => Theme.of(this).extension<ZussGoColors>()!;
   TextTheme get textTheme => Theme.of(this).textTheme;

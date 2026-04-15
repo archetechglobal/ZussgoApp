@@ -9,13 +9,13 @@ class ZussGoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeService = context.watch<ThemeService>();
+    // V3: Dark-only design — ignore theme toggle, always dark
     return MaterialApp.router(
       title: 'ZussGo',
       debugShowCheckedModeBanner: false,
-      theme: ZussGoTheme.lightTheme,
+      theme: ZussGoTheme.darkTheme,
       darkTheme: ZussGoTheme.darkTheme,
-      themeMode: themeService.mode,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
     );
   }

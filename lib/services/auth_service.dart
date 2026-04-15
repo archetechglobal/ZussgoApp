@@ -132,12 +132,6 @@ class AuthService {
     await prefs.setString('user_data', jsonEncode(user));
   }
 
-  // ─── UPDATE SAVED USER (for when profile gets completed) ───
-  static Future<void> updateSavedUser(Map<String, dynamic> updatedUser) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_data', jsonEncode(updatedUser));
-  }
-
   // ─── GET OTHER USERS (for home feed) ───
   static Future<Map<String, dynamic>> getUsers({
     required String userId,
