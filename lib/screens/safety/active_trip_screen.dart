@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../config/api.dart';
+import '../../config/zuss_icons.dart';
 
 class ActiveTripScreen extends StatefulWidget {
   const ActiveTripScreen({super.key});
@@ -163,7 +164,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> with TickerProvider
                       if (_sosTriggered && !_alertSent)
                         Text('$_countdown', style: GoogleFonts.outfit(fontSize: 56, fontWeight: FontWeight.w900, color: c.rose))
                       else if (_alertSent)
-                        Text('✓', style: GoogleFonts.outfit(fontSize: 56, fontWeight: FontWeight.w900, color: c.sage))
+                        Icon(Icons.check_circle_rounded, size: 56, color: c.sage)
                       else
                         GestureDetector(
                           onTap: _triggerSOS,
@@ -183,7 +184,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> with TickerProvider
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Text('🆘', style: TextStyle(fontSize: 48)),
+                                      Icon(ZussIcons.sos, size: 48, color: context.colors.rose),
                                       const SizedBox(height: 4),
                                       Text('HOLD FOR SOS', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2)),
                                     ],

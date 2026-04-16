@@ -111,7 +111,6 @@ class ZussGoColors extends ThemeExtension<ZussGoColors> {
     border: Color(0xFF2A2530), borderWarm: Color(0xFF332D28),
   );
 
-  // Both themes are dark in V3
   static const ZussGoColors light = dark;
 }
 
@@ -212,6 +211,9 @@ class ZussGoTheme {
 
   static ThemeData get lightTheme => darkTheme;
 
+  // ── CARD DECORATIONS ──────────────────────────────────────────────────────
+
+  /// Default card — border, no shadow
   static BoxDecoration cardDecoration(BuildContext context) {
     final c = colors(context);
     return BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.border, width: 1));
@@ -221,6 +223,64 @@ class ZussGoTheme {
     final c = colors(context);
     return BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border, width: 1));
   }
+
+  /// Hero gradient — for featured/highlighted content
+  static BoxDecoration heroCardDecoration(BuildContext context) {
+    final c = colors(context);
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      gradient: gradientHero,
+      border: Border.all(color: c.borderWarm, width: 1),
+    );
+  }
+
+  /// Warm elevated — for companion requests, important actions
+  static BoxDecoration warmCardDecoration(BuildContext context) {
+    final c = colors(context);
+    return BoxDecoration(
+      color: c.cardWarm,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: c.borderWarm, width: 1),
+      boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8))],
+    );
+  }
+
+  /// Floating — shadow-elevated, no border (traveler cards, about sections)
+  static BoxDecoration floatingCardDecoration(BuildContext context) {
+    final c = colors(context);
+    return BoxDecoration(
+      color: c.card,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2)),
+      ],
+    );
+  }
+
+  /// Accent-bordered — subtle color tint (companion rows, trust cards)
+  static BoxDecoration accentCardDecoration(BuildContext context, Color accent) {
+    final c = colors(context);
+    return BoxDecoration(
+      color: c.card,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: accent.withValues(alpha: 0.25), width: 1),
+      boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4))],
+    );
+  }
+
+  /// Frosted — translucent with shadow (overlapping stats row)
+  static BoxDecoration frostedCardDecoration(BuildContext context) {
+    final c = colors(context);
+    return BoxDecoration(
+      color: c.card.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: c.border.withValues(alpha: 0.5), width: 1),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 6))],
+    );
+  }
+
+  // ── INPUT DECORATIONS ─────────────────────────────────────────────────────
 
   static InputDecoration inputDecoration({String? hint, Widget? prefix, Widget? suffix}) {
     return InputDecoration(

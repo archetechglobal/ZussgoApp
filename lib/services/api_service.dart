@@ -403,6 +403,19 @@ class ApiService {
   }
 
 
+  // ─── MATCH SCORING ───
+
+  /// Get real match score between current user and target user from matching engine
+  static Future<Map<String, dynamic>> getMatchScore(String userId, String targetId) async {
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/matching/score?userId=$userId&targetId=$targetId"),
+        headers: _headers(),
+      );
+      return _parse(response);
+    } catch (e) { return _error(); }
+  }
+
   static Future<Map<String, dynamic>> getSmartMatches({
     required String tripId,
     required String userId,

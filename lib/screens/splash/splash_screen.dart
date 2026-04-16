@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../config/zuss_icons.dart';
 import '../../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -83,11 +84,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, -0.1),
-                  radius: 0.8,
-                  colors: [Color(0x10FF6B4A), Colors.transparent],
-                ),
+                gradient: RadialGradient(center: Alignment(0, -0.1), radius: 0.8, colors: [Color(0x10FF6B4A), Colors.transparent]),
               ),
             ),
           ),
@@ -100,16 +97,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 return Transform.scale(
                   scale: _breathe.value,
                   child: Opacity(
-                    opacity: 2.0 - _breathe.value, // 0.85 -> 0.4-ish
+                    opacity: 2.0 - _breathe.value,
                     child: Container(
-                      width: 300,
-                      height: 300,
+                      width: 300, height: 300,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [Color(0x15FF6B4A), Colors.transparent],
-                          stops: [0.0, 0.7],
-                        ),
+                        gradient: RadialGradient(colors: [Color(0x15FF6B4A), Colors.transparent], stops: [0.0, 0.7]),
                       ),
                     ),
                   ),
@@ -125,15 +118,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Globe emoji
-                  Text(
-                    '🌍',
-                    style: TextStyle(
-                      fontSize: 64,
-                      shadows: [
-                        Shadow(color: const Color(0x50FF6B4A), blurRadius: 24),
-                      ],
+                  // Globe icon (proper icon, not emoji)
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(colors: [Color(0xFFFF6B4A), Color(0xFFFF8A65)]),
+                      boxShadow: [BoxShadow(color: const Color(0x50FF6B4A), blurRadius: 24)],
                     ),
+                    child: const Icon(ZussIcons.globe, size: 36, color: Colors.white),
                   ),
                   const SizedBox(height: 20),
 
@@ -152,41 +145,31 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   // Tagline
                   Text(
                     'TRAVEL TOGETHER',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 3,
-                      color: const Color(0xFF7D7573),
-                    ),
+                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 3, color: const Color(0xFF7D7573)),
                   ),
 
                   const SizedBox(height: 48),
 
                   // Loading bar
                   SizedBox(
-                    width: 100,
-                    height: 3,
+                    width: 100, height: 3,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(99),
                       child: AnimatedBuilder(
                         animation: _loadProgress,
                         builder: (context, child) {
-                          return Stack(
-                            children: [
-                              Container(color: const Color(0xFF2A2530)),
-                              FractionallySizedBox(
-                                widthFactor: _loadProgress.value,
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    borderRadius: BorderRadius.all(Radius.circular(99)),
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFFFF6B4A), Color(0xFFFFBD3D)],
-                                    ),
-                                  ),
+                          return Stack(children: [
+                            Container(color: const Color(0xFF2A2530)),
+                            FractionallySizedBox(
+                              widthFactor: _loadProgress.value,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  borderRadius: BorderRadius.all(Radius.circular(99)),
+                                  gradient: LinearGradient(colors: [Color(0xFFFF6B4A), Color(0xFFFFBD3D)]),
                                 ),
                               ),
-                            ],
-                          );
+                            ),
+                          ]);
                         },
                       ),
                     ),

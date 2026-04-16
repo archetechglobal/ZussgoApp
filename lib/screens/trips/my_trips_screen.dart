@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../config/zuss_icons.dart';
+import '../../config/animations.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -94,7 +97,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                       width: double.infinity, padding: const EdgeInsets.all(28),
                       decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: c.border)),
                       child: Column(children: [
-                        const Text('✈️', style: TextStyle(fontSize: 40)),
+                        Icon(Icons.flight_rounded, size: 40, color: c.muted.withValues(alpha: 0.4)),
                         const SizedBox(height: 10),
                         Text('No trips yet', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.text)),
                         const SizedBox(height: 6),
@@ -139,7 +142,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                               const SizedBox(height: 2),
                               Text('$memberCount members · ${_fmt(g['startDate'])}–${_fmt(g['endDate'])}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: c.muted)),
                             ])),
-                            Text('›', style: GoogleFonts.outfit(fontSize: 18, color: c.lavender)),
+                            Icon(Icons.chevron_right_rounded, size: 18, color: c.lavender),
                           ]),
                         ),
                       );

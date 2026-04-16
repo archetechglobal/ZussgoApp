@@ -1,8 +1,10 @@
+import '../../config/zuss_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../config/zuss_icons.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,7 +65,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     // Logo emoji
-                    Text('🌍', style: TextStyle(fontSize: 52, shadows: [Shadow(color: const Color(0x30FF6B4A), blurRadius: 20)])),
+                    Container(
+                      width: 64, height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(colors: [Color(0xFFFF6B4A), Color(0xFFFF8A65)]),
+                        boxShadow: [BoxShadow(color: const Color(0x30FF6B4A), blurRadius: 20)],
+                      ),
+                      child: const Icon(ZussIcons.globe, size: 32, color: Colors.white),
+                    ),
                     const SizedBox(height: 12),
 
                     // Brand
@@ -93,7 +103,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: c.border),
                       ),
-                      child: Text('🇮🇳 India', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.textSecondary)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(ZussIcons.location, size: 12, color: c.textSecondary),
+                        const SizedBox(width: 3),
+                        Text('India', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: c.textSecondary)),
+                      ]),
                     ),
                   ],
                 ),

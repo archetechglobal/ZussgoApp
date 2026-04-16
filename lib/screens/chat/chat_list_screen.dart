@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../config/zuss_icons.dart';
+import '../../config/animations.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -27,7 +30,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final r = await ApiService.getConversations(_userId!);
     if (mounted) setState(() {
       _loading = false;
-      if (r["success"] == true) _convos = List<Map<String, dynamic>>.from(r["data"] ?? []);
+      if (r["success"] == true) {
+        _convos = List<Map<String, dynamic>>.from(r["data"] ?? []);
+        // Sort: unread first, then by lastMessageAt
+        _convos.sort((a, b) {
+          final aUnread = (a['unreadCount'] as num?)?.toInt() ?? 0;
+          final bUnread = (b['unreadCount'] as num?)?.toInt() ?? 0;
+          if (aUnread > 0 && bUnread == 0) return -1;
+          if (aUnread == 0 && bUnread > 0) return 1;
+          final aTime = a['lastMessageAt'] ?? '';
+          final bTime = b['lastMessageAt'] ?? '';
+          return bTime.compareTo(aTime);
+        });
+      }
     });
   }
 
@@ -45,6 +60,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final unreadCount = _convos.where((cv) => ((cv['unreadCount'] as num?)?.toInt() ?? 0) > 0).length;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -60,7 +76,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Messages', style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: c.text)),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('Messages', style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: c.text)),
+                      if (unreadCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: c.primarySoft, borderRadius: BorderRadius.circular(12)),
+                          child: Text('$unreadCount new', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: c.primary)),
+                        ),
+                    ]),
                     const SizedBox(height: 4),
                     Text('Your travel conversations', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.textSecondary)),
                     const SizedBox(height: 16),
@@ -68,16 +92,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     // Search
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14)),
+                      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.border)),
                       child: Row(children: [
-                        Text('🔍', style: TextStyle(fontSize: 15, color: c.muted.withValues(alpha: 0.4))),
+                        Icon(ZussIcons.search, size: 16, color: c.muted.withValues(alpha: 0.4)),
                         const SizedBox(width: 10),
                         Text('Search messages…', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.muted)),
                       ]),
                     ),
                     const SizedBox(height: 8),
                   ]),
-                ),
+                ).zussHero(delay: 0),
 
                 // Conversations
                 Expanded(
@@ -97,6 +121,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         final hasMsg = conv['lastMessage'] != null;
                         final unread = (conv['unreadCount'] as num?)?.toInt() ?? 0;
                         final dest = conv['trip']?['destination'];
+                        final isUnread = unread > 0;
 
                         return GestureDetector(
                           onTap: () async {
@@ -104,47 +129,109 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             _load();
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              // Instagram-style: unread messages get a subtle tinted background
+                              color: isUnread ? c.primarySoft.withValues(alpha: 0.15) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              // Unread gets a left accent border
+                              border: isUnread ? Border(
+                                left: BorderSide(color: c.primary, width: 3),
+                              ) : null,
+                            ),
                             child: Row(
                               children: [
-                                // Photo avatar
-                                _ChatAvatar(photoUrl: o['profilePhotoUrl'], name: o['fullName'] ?? 'U'),
+                                // Avatar with unread dot
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    _ChatAvatar(photoUrl: o['profilePhotoUrl'], name: o['fullName'] ?? 'U'),
+                                    // Unread indicator dot on avatar (like Instagram green dot)
+                                    if (isUnread)
+                                      Positioned(
+                                        bottom: 0, right: 0,
+                                        child: Container(
+                                          width: 14, height: 14,
+                                          decoration: BoxDecoration(
+                                            color: c.primary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: c.bg, width: 2.5),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                                 const SizedBox(width: 14),
 
                                 // Body
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                    Flexible(child: Text(o['fullName'] ?? 'Traveler', style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w600, color: c.text), overflow: TextOverflow.ellipsis)),
-                                    Text(_timeAgo(conv['lastMessageAt']), style: GoogleFonts.plusJakartaSans(fontSize: 11, color: unread > 0 ? c.primary : c.muted, fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w400)),
-                                  ]),
-                                  const SizedBox(height: 4),
-                                  Row(children: [
-                                    Expanded(child: Text(
-                                      hasMsg ? conv['lastMessage'] : 'Say hello! 👋',
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: unread > 0 ? c.text : c.muted, fontWeight: unread > 0 ? FontWeight.w600 : FontWeight.w400,
-                                          fontStyle: hasMsg ? FontStyle.normal : FontStyle.italic),
-                                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    )),
-                                    if (unread > 0) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        constraints: const BoxConstraints(minWidth: 20), height: 20,
-                                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                                        decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(10)),
-                                        alignment: Alignment.center,
-                                        child: Text('$unread', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
-                                      ),
-                                    ],
-                                  ]),
-                                  if (dest != null) ...[
+                                Expanded(child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(child: Text(
+                                          o['fullName'] ?? 'Traveler',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 15,
+                                            fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
+                                            color: c.text,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        )),
+                                        Text(
+                                          _timeAgo(conv['lastMessageAt']),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: isUnread ? c.primary : c.muted,
+                                            fontWeight: isUnread ? FontWeight.w700 : FontWeight.w400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text('${dest['emoji'] ?? '🗺️'} ${dest['name'] ?? ''}', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: c.muted)),
+                                    Row(children: [
+                                      Expanded(child: Text(
+                                        hasMsg ? conv['lastMessage'] : 'Say hello!',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          color: isUnread ? c.text : c.muted,
+                                          fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
+                                          fontStyle: hasMsg ? FontStyle.normal : FontStyle.italic,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )),
+                                      if (isUnread) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          constraints: const BoxConstraints(minWidth: 22), height: 22,
+                                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                                          decoration: BoxDecoration(
+                                            color: c.primary,
+                                            borderRadius: BorderRadius.circular(11),
+                                            boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 6)],
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text('$unread', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                                        ),
+                                      ],
+                                    ]),
+                                    if (dest != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(mainAxisSize: MainAxisSize.min, children: [
+                                        Icon(ZussIcons.location, size: 10, color: c.muted),
+                                        const SizedBox(width: 3),
+                                        Text(dest['name'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: c.muted)),
+                                      ]),
+                                    ],
                                   ],
-                                ])),
+                                )),
                               ],
                             ),
                           ),
-                        );
+                        ).zussEntrance(index: i);
                       },
                     ),
                   ),
@@ -162,20 +249,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Center(child: Padding(
       padding: const EdgeInsets.all(40),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Text('💬', style: TextStyle(fontSize: 48)),
-        const SizedBox(height: 16),
-        Text('No messages yet', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: c.text)),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [c.primary.withValues(alpha: 0.08), Colors.transparent]))),
+            Container(width: 80, height: 80, decoration: BoxDecoration(shape: BoxShape.circle, color: c.card, border: Border.all(color: c.border, width: 1.5),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))]),
+                child: Icon(ZussIcons.chat, size: 32, color: c.primary.withValues(alpha: 0.6))),
+            Positioned(top: 15, right: 20, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: c.goldSoft, shape: BoxShape.circle, border: Border.all(color: c.goldMid)))),
+            Positioned(bottom: 20, left: 15, child: Container(width: 8, height: 8, decoration: BoxDecoration(color: c.lavenderSoft, shape: BoxShape.circle))),
+          ],
+        ).zussPop(delay: 100),
+        const SizedBox(height: 24),
+        Text('No messages yet', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: c.text)).zussEntrance(index: 0, baseDelay: 200),
         const SizedBox(height: 8),
-        Text('When someone accepts your companion\nrequest, you can chat with them here.', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.muted, height: 1.6), textAlign: TextAlign.center),
+        Text('Find a travel companion and\nstart planning your next adventure', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: c.muted, height: 1.6), textAlign: TextAlign.center).zussEntrance(index: 1, baseDelay: 200),
         const SizedBox(height: 24),
         GestureDetector(
           onTap: () => context.go('/search'),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Find Companions', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
-          ),
-        ),
+          child: Container(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+              decoration: BoxDecoration(gradient: ZussGoTheme.gradientPrimary, borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(ZussIcons.compass, size: 16, color: Colors.white), const SizedBox(width: 8),
+                Text('Find Companions', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+              ])),
+        ).zussEntrance(index: 2, baseDelay: 200),
       ]),
     ));
   }
@@ -191,18 +290,11 @@ class _ChatAvatar extends StatelessWidget {
     final c = context.colors;
     return Container(
       width: 52, height: 52,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(colors: [c.primary.withValues(alpha: 0.3), c.card]),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: LinearGradient(colors: [c.primary.withValues(alpha: 0.3), c.card])),
       clipBehavior: Clip.hardEdge,
-      child: photoUrl != null
-          ? Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initial(c))
-          : _initial(c),
+      child: photoUrl != null ? Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initial(c)) : _initial(c),
     );
   }
 
-  Widget _initial(ZussGoColors c) => Center(
-    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: c.primary)),
-  );
+  Widget _initial(ZussGoColors c) => Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: c.primary)));
 }

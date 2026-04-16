@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../config/zuss_icons.dart';
 
 class FounderAccessScreen extends StatefulWidget {
   const FounderAccessScreen({super.key});
@@ -83,7 +84,7 @@ class _FounderAccessScreenState extends State<FounderAccessScreen> with TickerPr
                       scale: _iconScale.value,
                       child: Transform.rotate(
                         angle: _iconRotation.value,
-                        child: const Text('🎉', style: TextStyle(fontSize: 72)),
+                        child: Icon(Icons.celebration_rounded, size: 72, color: context.colors.primary),
                       ),
                     );
                   },

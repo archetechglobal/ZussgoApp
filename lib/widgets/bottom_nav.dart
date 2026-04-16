@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
+import '../config/zuss_icons.dart';
 import '../services/notification_service.dart';
 
 class ZussGoBottomNav extends StatelessWidget {
@@ -25,11 +26,11 @@ class ZussGoBottomNav extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _NavItem(emoji: '🏠', label: 'Home', index: 0, currentIndex: currentIndex, onTap: () => context.go('/home')),
-          _NavItem(emoji: '🗺️', label: 'Discover', index: 1, currentIndex: currentIndex, onTap: () => context.go('/search')),
-          _NavItem(emoji: '⭐', label: 'Rewards', index: 2, currentIndex: currentIndex, onTap: () => context.go('/matches')),
-          _NavItem(emoji: '💬', label: 'Chats', index: 3, currentIndex: currentIndex, hasBadge: true, onTap: () => context.go('/chats')),
-          _NavItem(emoji: '👤', label: 'Profile', index: 4, currentIndex: currentIndex, onTap: () => context.go('/settings')),
+          _NavItem(icon: ZussIcons.home, label: 'Home', index: 0, currentIndex: currentIndex, onTap: () => context.go('/home')),
+          _NavItem(icon: ZussIcons.discover, label: 'Discover', index: 1, currentIndex: currentIndex, onTap: () => context.go('/search')),
+          _NavItem(icon: ZussIcons.rewards, label: 'Rewards', index: 2, currentIndex: currentIndex, onTap: () => context.go('/matches')),
+          _NavItem(icon: ZussIcons.chat, label: 'Chats', index: 3, currentIndex: currentIndex, hasBadge: true, onTap: () => context.go('/chats')),
+          _NavItem(icon: ZussIcons.profile, label: 'Profile', index: 4, currentIndex: currentIndex, onTap: () => context.go('/settings')),
         ],
       ),
     );
@@ -37,21 +38,14 @@ class ZussGoBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String label;
   final int index;
   final int currentIndex;
   final bool hasBadge;
   final VoidCallback onTap;
 
-  const _NavItem({
-    required this.emoji,
-    required this.label,
-    required this.index,
-    required this.currentIndex,
-    this.hasBadge = false,
-    required this.onTap,
-  });
+  const _NavItem({required this.icon, required this.label, required this.index, required this.currentIndex, this.hasBadge = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -79,31 +73,19 @@ class _NavItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Text(emoji, style: TextStyle(fontSize: 19, color: isActive ? null : Colors.white.withValues(alpha: 0.35))),
+                Icon(icon, size: 22, color: isActive ? c.primary : c.muted.withValues(alpha: 0.5)),
                 if (hasBadge && hasUnseen)
                   Positioned(
                     top: -2, right: -4,
                     child: Container(
                       width: 7, height: 7,
-                      decoration: BoxDecoration(
-                        color: c.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: c.card, width: 2),
-                      ),
+                      decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle, border: Border.all(color: c.card, width: 2)),
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 3),
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-                color: isActive ? c.primary : c.muted,
-              ),
-            ),
+            Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: isActive ? c.primary : c.muted)),
           ],
         ),
       ),

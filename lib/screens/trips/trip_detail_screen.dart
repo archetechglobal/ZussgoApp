@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../../config/theme.dart';
 import '../../config/api.dart';
+import '../../config/zuss_icons.dart';
+import '../../config/animations.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 
@@ -123,7 +126,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               const SizedBox(width: 10),
               Text('Trip Details', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: c.text)),
               const Spacer(),
-              const Text('🔖', style: TextStyle(fontSize: 18)),
+              Icon(Icons.bookmark_border_rounded, size: 18, color: c.muted),
             ]),
           ),
 
@@ -182,7 +185,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, c.surface], stops: const [0.4, 1.0]))),
         Positioned(bottom: 20, left: 20, right: 20, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(8)),
-              child: Text('🔥 Trending', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white))),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(ZussIcons.trending, size: 12, color: Colors.white), const SizedBox(width: 4), Text('Trending', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white))])),
           const SizedBox(height: 8),
           Text(destName, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
           const SizedBox(height: 4),
@@ -204,10 +207,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
       child: Wrap(spacing: 8, runSpacing: 8, children: [
-        _InfoChip(emoji: '📅', value: '${_formatDate(startDate)}–${_formatDate(endDate)}', label: '$days days', c: c),
-        _InfoChip(emoji: '💰', value: budget, label: 'Budget', c: c),
-        _InfoChip(emoji: '🌤️', value: '–°C', label: 'Avg temp', c: c),
-        _InfoChip(emoji: '👥', value: '$spotsLeft/$maxMembers', label: 'Spots left', c: c),
+        _InfoChip(icon: Icons.calendar_today_rounded, value: '${_formatDate(startDate)}–${_formatDate(endDate)}', label: '$days days', c: c),
+        _InfoChip(icon: ZussIcons.cashback, value: budget, label: 'Budget', c: c),
+        _InfoChip(icon: Icons.thermostat_rounded, value: '–°C', label: 'Avg temp', c: c),
+        _InfoChip(icon: ZussIcons.group, value: '$spotsLeft/$maxMembers', label: 'Spots left', c: c),
       ]),
     );
   }
@@ -345,9 +348,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 }
 
 class _InfoChip extends StatelessWidget {
-  final String emoji, value, label;
+  final IconData icon;
+  final String value, label;
   final ZussGoColors c;
-  const _InfoChip({required this.emoji, required this.value, required this.label, required this.c});
+  const _InfoChip({required this.icon, required this.value, required this.label, required this.c});
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +359,7 @@ class _InfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: c.border)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(emoji, style: const TextStyle(fontSize: 16)),
+        Icon(icon, size: 16, color: c.primary),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: c.text)),

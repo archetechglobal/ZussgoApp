@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../config/zuss_icons.dart';
+import '../../config/animations.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
@@ -50,8 +53,8 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
           padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 0),
           child: Row(children: [
             GestureDetector(onTap: () => context.pop(),
-                child: Container(width: 40, height: 40, decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(13)),
-                    child: Icon(Icons.arrow_back_rounded, color: c.text, size: 16))),
+                child: Container(width: 40, height: 40, decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(13), border: Border.all(color: c.border)),
+                    child: Icon(ZussIcons.back, color: c.text, size: 16))),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(widget.destinationName, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: c.text)),
@@ -59,8 +62,12 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
             ])),
             GestureDetector(onTap: _showCreateGroupModal,
                 child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(color: c.primarySoft, borderRadius: BorderRadius.circular(12)),
-                    child: Text('+ Group', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w800, color: c.primary)))),
+                    decoration: BoxDecoration(color: c.primarySoft, borderRadius: BorderRadius.circular(12), border: Border.all(color: c.primaryMid)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(ZussIcons.group, size: 14, color: c.primary),
+                      const SizedBox(width: 4),
+                      Text('Group', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w800, color: c.primary)),
+                    ]))),
           ]),
         ),
 
@@ -85,7 +92,12 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
 
   Widget _buildTravelers(ZussGoColors c) {
     if (_travelers.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Text('🗺️', style: TextStyle(fontSize: 44)), const SizedBox(height: 12),
+      Container(
+        width: 64, height: 64,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: c.card, border: Border.all(color: c.border)),
+        child: Icon(ZussIcons.compass, size: 28, color: c.muted.withValues(alpha: 0.4)),
+      ),
+      const SizedBox(height: 12),
       Text('No travelers yet', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.text)),
     ]));
 
@@ -96,7 +108,7 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
         final t = _travelers[i];
         final name = t['fullName'] ?? 'Traveler';
         final photo = t['profilePhotoUrl'];
-        final matchScore = 94 - (i * 4);
+        final matchScore = t['matchScore'] ?? (94 - (i * 4));
         return GestureDetector(
           onTap: () => context.push('/traveler/${t['id'] ?? ''}'),
           child: Padding(
@@ -116,7 +128,7 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
               ]),
             ),
           ),
-        );
+        ).zussEntrance(index: i);
       },
     );
   }
@@ -125,13 +137,22 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
 
   Widget _buildGroups(ZussGoColors c) {
     if (_groups.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Text('👥', style: TextStyle(fontSize: 44)), const SizedBox(height: 12),
+      Container(
+        width: 64, height: 64,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: c.card, border: Border.all(color: c.border)),
+        child: Icon(ZussIcons.group, size: 28, color: c.muted.withValues(alpha: 0.4)),
+      ),
+      const SizedBox(height: 12),
       Text('No groups yet', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: c.text)),
       const SizedBox(height: 16),
       GestureDetector(onTap: _showCreateGroupModal,
           child: Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(12)),
-              child: Text('+ Create Group', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)))),
+              decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                const SizedBox(width: 4),
+                Text('Create Group', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+              ]))),
     ]));
 
     return ListView.builder(
@@ -147,10 +168,10 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
           onTap: () => context.push('/group/${g['id']}'),
           child: Container(
             margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18)),
+            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: c.border)),
             child: Row(children: [
               Container(width: 44, height: 44, decoration: BoxDecoration(color: c.lavenderSoft, borderRadius: BorderRadius.circular(14)),
-                  alignment: Alignment.center, child: Text(dest['emoji'] ?? '🗺️', style: const TextStyle(fontSize: 22))),
+                  alignment: Alignment.center, child: Text(dest['emoji'] ?? '', style: const TextStyle(fontSize: 22))),
               const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(g['name'] ?? 'Group Trip', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: c.text)),
@@ -161,7 +182,7 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
                   child: Text(isFull ? 'Full' : 'Open', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: isFull ? c.rose : c.sage))),
             ]),
           ),
-        );
+        ).zussEntrance(index: i);
       },
     );
   }
@@ -207,9 +228,13 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
                 if (range != null) setSheet(() { start = range.start; end = range.end; });
               },
               child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16)),
-                  child: Text(start != null ? '📅 ${_fmt(start!)} – ${_fmt(end!)}' : '📅 Select dates',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: start != null ? c.text : c.muted))),
+                  decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border)),
+                  child: Row(children: [
+                    Icon(Icons.calendar_today_rounded, size: 16, color: start != null ? c.primary : c.muted),
+                    const SizedBox(width: 10),
+                    Text(start != null ? '${_fmt(start!)} – ${_fmt(end!)}' : 'Select dates',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: start != null ? c.text : c.muted)),
+                  ])),
             ),
             const SizedBox(height: 20),
 
@@ -220,7 +245,7 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
                 final userId = _currentUser['userId'];
                 if (userId == null) return;
                 final r = await ApiService.createGroup({
-                  'userId': userId,  // Fixed: was 'creatorId'
+                  'userId': userId,
                   'name': nameC.text.trim(),
                   'destinationId': widget.destinationId,
                   'startDate': start!.toUtc().toIso8601String(),
@@ -231,13 +256,12 @@ class _BrowseTravelersScreenState extends State<BrowseTravelersScreen> {
                 if (r['success'] == true) {
                   Navigator.pop(ctx);
                   _load();
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Group created! 🎉'), backgroundColor: c.primary));
                 } else {
                   if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? 'Failed to create group'), backgroundColor: c.rose));
                 }
               },
               child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: c.primary, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]),
                   child: Center(child: creating
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : Text('Create Group', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)))),
@@ -257,6 +281,6 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(child: GestureDetector(onTap: onTap,
       child: Container(padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(color: active ? c.primary : c.card, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(color: active ? c.primary : c.card, borderRadius: BorderRadius.circular(14), border: active ? null : Border.all(color: c.border)),
           child: Center(child: Text(label, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: active ? Colors.white : c.muted))))));
 }
